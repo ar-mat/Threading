@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+
+		<Company>Armat</Company>
+		<Product>Armat Threading</Product>
+		<Authors>Ara Petrosyan</Authors>
+
+		<RootNamespace>Armat.Threading</RootNamespace>
+		<AssemblyName>armat.threading</AssemblyName>
+
+		<Version>1.0.0</Version>
+		<AssemblyVersion>$(Version).0</AssemblyVersion>
+		<FileVersion>$(Version).0</FileVersion>
+		<!--<_NugetVersionPostfix>-beta</_NugetVersionPostfix>-->
+		<_NugetVersionPostfix></_NugetVersionPostfix>
+
+		<OutputType>Library</OutputType>
+		<_DotNetVersion>net6.0</_DotNetVersion>
+		<TargetFramework>$(_DotNetVersion)</TargetFramework>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+		<_BinDir>$(SolutionDir)\..\..\bin\$(Configuration)</_BinDir>
+		<OutputPath>$(_BinDir)\</OutputPath>
+		<IntermediateOutputPath>$(OutputPath)\obj\$(MSBuildProjectName)\</IntermediateOutputPath>
+
+		<ImplicitUsings>disable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+
+		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+		<Title>Armat Threading Library</Title>
+		<Description>C# class library for developing multithreaded applications. It can be used as an alternative to .Net System.Threading.Tasks library to support multiple schedulers within a context of a single application.</Description>
+		<PackageIcon>AppIcon.png</PackageIcon>
+		<PackageTags>Threading Async Tasks Jobs Parallel Scheduler</PackageTags>
+		<PackageReadmeFile>Readme.md</PackageReadmeFile>
+
+		<_ProjectWebpageUrl>http://armat.am/products/threading</_ProjectWebpageUrl>
+		<_ProjectLicenseType>MIT</_ProjectLicenseType>
+		<_SourceCoreRepositoryRootUrl>https://github.com/ar-mat/Threading</_SourceCoreRepositoryRootUrl>
+		<_SourceCoreRepositoryType>git</_SourceCoreRepositoryType>
+
+		<PackageVersion>$(Version)$(_NugetVersionPostfix)</PackageVersion>
+		<PackageProjectUrl>$(_ProjectWebpageUrl)</PackageProjectUrl>
+		<RepositoryUrl>$(_SourceCoreRepositoryRootUrl)/Projects/Threading</RepositoryUrl>
+		<RepositoryType>$(_SourceCoreRepositoryType)</RepositoryType>
+		<PackageLicenseExpression>$(_ProjectLicenseType)</PackageLicenseExpression>
+
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="armat.utils" Version="1.0.0" />
+	</ItemGroup>
+
+</Project>
