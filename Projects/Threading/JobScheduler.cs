@@ -9,6 +9,8 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Armat.Threading
 {
+	// JobScheduler is the default implementation of IJobScheduler interface
+	// It performs asynchronous execution of jobs with a dedicated thread pools for regular and long-running jobs respectively
 	public class JobScheduler : JobSchedulerBase
 	{
 		public JobScheduler() : this(String.Empty, Default.MinThreads, Default.MaxThreads, Default.MaxLongRunningThreads)

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 
 namespace Armat.Threading
 {
+	// abstract base class for IJobScheduler implementations
+	// it's holding / managing the Default and Current Job Schedulers
 	public abstract class JobSchedulerBase : IJobScheduler
 	{
 		protected JobSchedulerBase()
@@ -47,6 +49,8 @@ namespace Armat.Threading
 		public abstract Boolean Cancel(Job job);
 		public abstract Int32 PendingJobsCount { get; }
 
+		// this method must be used when executing jobs in a scheduler
+		// in sets the IJobScheduler.Current property to this during the job execution
 		protected JobStatus ExecuteJobProcedure(Job job)
 		{
 			if (job == null)
@@ -71,6 +75,8 @@ namespace Armat.Threading
 
 			return result;
 		}
+		// this method must be used when executing jobs in a scheduler
+		// in sets the IJobScheduler.Current property to this during the job execution
 		protected Int32 ExecuteJobContinuations(Job job)
 		{
 			if (job == null)

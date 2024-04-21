@@ -15,8 +15,10 @@ using System.Threading;
 // Method Builder related resources
 // https://github.com/dotnet/roslyn/blob/master/docs/features/task-types.md
 
+
 namespace Armat.Threading
 {
+	// Job - the central asynchronous execution unit of Armat.Threading library
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1068:CancellationToken parameters must come last", Justification = "<Pending>")]
 	[System.Runtime.CompilerServices.AsyncMethodBuilder(typeof(JobMethodBuilder))]
 	public class Job : IAsyncResult, IDisposable
@@ -35,24 +37,26 @@ namespace Armat.Threading
 			: this(action, null, CancellationToken.None, creationOptions, null, null)
 		{
 		}
-		public Job(Action action, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler)
+		public Job(Action action, CancellationToken cancellationToken, JobCreationOptions creationOptions,
+			IJobScheduler scheduler)
 			: this(action, null, cancellationToken, creationOptions, scheduler, null)
 		{
 		}
 
-		public Job(Action<Object> action, Object state)
+		public Job(Action<Object> action, Object? state)
 			: this(action, state, CancellationToken.None, JobCreationOptions.None, null, null)
 		{
 		}
-		public Job(Action<Object> action, Object state, CancellationToken cancellationToken)
+		public Job(Action<Object> action, Object? state, CancellationToken cancellationToken)
 			: this(action, state, cancellationToken, JobCreationOptions.None, null, null)
 		{
 		}
-		public Job(Action<Object> action, Object state, JobCreationOptions creationOptions)
+		public Job(Action<Object> action, Object? state, JobCreationOptions creationOptions)
 			: this(action, state, CancellationToken.None, creationOptions, null, null)
 		{
 		}
-		public Job(Action<Object> action, Object state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler)
+		public Job(Action<Object> action, Object? state, CancellationToken cancellationToken, 
+			JobCreationOptions creationOptions, IJobScheduler scheduler)
 			: this(action, state, cancellationToken, creationOptions, scheduler, null)
 		{
 		}
@@ -95,13 +99,9 @@ namespace Armat.Threading
 				this.AppendException(exc);
 			}
 		}
-		internal Job(Delegate procedure, Object state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler, Job initiator)
+		internal Job(Delegate procedure, Object? state, CancellationToken cancellationToken, 
+			JobCreationOptions creationOptions, IJobScheduler? scheduler, Job? initiator)
 		{
-			if (procedure == null)
-#pragma warning disable IDE0016 // Use 'throw' expression
-				throw new ArgumentNullException(nameof(procedure));
-#pragma warning restore IDE0016 // Use 'throw' expression
-
 			Id = Interlocked.Increment(ref _idCounter);
 
 			Procedure = procedure;
@@ -149,8 +149,8 @@ namespace Armat.Threading
 		private static readonly Job _completedJob = new(JobStatus.RanToCompletion);
 
 		[ThreadStatic]
-		private static Job _currentJob;
-		public static Job Current
+		private static Job? _currentJob;
+		public static Job? Current
 		{
 			get
 			{
@@ -174,8 +174,9 @@ namespace Armat.Threading
 		public Int32 Id { get; }
 
 		protected Delegate Procedure { get; set; }
-		public Object AsyncState { get; protected set; }
+		public Object? AsyncState { get; protected set; }
 		public CancellationToken CancellationToken { get; }
+
 		private Int32 _executionOptions = 0;
 		public JobCreationOptions CreationOptions
 		{
@@ -186,47 +187,46 @@ namespace Armat.Threading
 			get { return (JobContinuationOptions)(_executionOptions & ALL_CONTINUATION_OPTIONS); }
 		}
 
-		public IJobScheduler Scheduler { get; protected set; }
-		private Int32 _status;
-		public JobStatus Status
-		{
-			get { return (JobStatus)_status; }
-		}
-		private Job _initiator = null;
-		public Job Initiator
+		public IJobScheduler? Scheduler { get; protected set; }
+
+		private Job? _initiator = null;
+		public Job? Initiator
 		{
 			get { return _initiator; }
 			private set
 			{
 #if DEBUG
-				Job initTester = value;
+				Job? initTester = value;
 				while (initTester != null && initTester != this)
 					initTester = initTester.Initiator;
-				System.Diagnostics.Debug.Assert(initTester != this);
+				Debug.Assert(initTester != this);
 #endif
 
 				_initiator = value;
 
 				if (_initiator == null)
-				{
-					Root = this;
 					Depth = 0;
-				}
 				else
-				{
-					Root = _initiator.Root;
 					Depth = _initiator.Depth + 1;
-				}
 			}
 		}
+
 		public Job Root
 		{
-			get; private set;
+			get
+			{
+				Job result = this;
+				while (result._initiator != null)
+					result = result._initiator;
+
+				return result;
+			}
 		}
 		public Int32 Depth
 		{
 			get; private set;
 		}
+
 		public Boolean IsContinuation
 		{
 			get { return (_executionOptions & JOB_CONTINUATION_FLAG) != 0; }
@@ -235,25 +235,26 @@ namespace Armat.Threading
 		{
 			get { return (_executionOptions & JOB_METHODBUILDERRESULT_FLAG) != 0; }
 		}
-		private IndigentList<Job> _continuations = null;
+
+		private IndigentList<Job>? _continuations = null;
 		private Int32 _execContinuationsBaseIndex = -1;
-		public IReadOnlyCollection<Job> Continuations
+		public IReadOnlyCollection<Job>? Continuations
 		{
 			get
 			{
-				IList<Job> listContinuations = _continuations;
-				if (listContinuations == null)
-					return null;
-
-				// return a read-only wrapper over the list
-				return new System.Collections.ObjectModel.ReadOnlyCollection<Job>(listContinuations);
+				return _continuations;
 			}
 		}
 		public Boolean HasContinuations
 		{
-			get { return _continuations != null; }
+			get { return _continuations != null && _continuations.Count > 0; }
 		}
 
+		private Int32 _status;
+		public JobStatus Status
+		{
+			get { return (JobStatus)_status; }
+		}
 		public Boolean IsCompleted
 		{
 			get { return Status >= JobStatus.RanToCompletion; }
@@ -275,18 +276,18 @@ namespace Armat.Threading
 			get { return IsCompleted && (CreationOptions & JobCreationOptions.RunSynchronously) == JobCreationOptions.RunSynchronously; }
 		}
 
-		private List<ExceptionDispatchInfo> _listExceptions = null;
-		private AggregateException _exception = null;
-		public AggregateException Exception
+		private List<ExceptionDispatchInfo>? _listExceptions = null;
+		private AggregateException? _exception = null;
+		public AggregateException? Exception
 		{
 			get
 			{
 				// return the current exception
-				AggregateException exc = _exception;
+				AggregateException? exc = _exception;
 				if (exc != null)
 					return exc;
 
-				List<ExceptionDispatchInfo> listExceptions = _listExceptions;
+				List<ExceptionDispatchInfo>? listExceptions = _listExceptions;
 				if (listExceptions == null)
 					return null;
 
@@ -302,14 +303,14 @@ namespace Armat.Threading
 						IEnumerable<Exception> exceptions = listExceptions.Select(edi => edi.SourceException);
 						exc = new AggregateException(exceptions);
 					}
-					Interlocked.CompareExchange<AggregateException>(ref _exception, exc, null);
+					Interlocked.CompareExchange<AggregateException?>(ref _exception, exc, null);
 				}
 
 				return _exception;
 			}
 		}
 
-		private ManualResetEventSlim _waitHandle = null;
+		private ManualResetEventSlim? _waitHandle = null;
 		public ManualResetEventSlim AsyncWaitHandleSlim
 		{
 			get
@@ -317,7 +318,7 @@ namespace Armat.Threading
 				if (_waitHandle == null)
 				{
 					// create the wait handle
-					Interlocked.CompareExchange<ManualResetEventSlim>(ref _waitHandle, new ManualResetEventSlim(false), null);
+					Interlocked.CompareExchange<ManualResetEventSlim?>(ref _waitHandle, new ManualResetEventSlim(false), null);
 
 					// set it signaling if already completed
 					if (IsCompleted)
