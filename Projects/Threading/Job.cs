@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 // Awaiter related resources
 // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#awaitable-expressions
@@ -38,25 +39,25 @@ namespace Armat.Threading
 		{
 		}
 		public Job(Action action, CancellationToken cancellationToken, JobCreationOptions creationOptions,
-			IJobScheduler scheduler)
+			IJobScheduler? scheduler)
 			: this(action, null, cancellationToken, creationOptions, scheduler, null)
 		{
 		}
 
-		public Job(Action<Object> action, Object? state)
+		public Job(Action<Object?> action, Object? state)
 			: this(action, state, CancellationToken.None, JobCreationOptions.None, null, null)
 		{
 		}
-		public Job(Action<Object> action, Object? state, CancellationToken cancellationToken)
+		public Job(Action<Object?> action, Object? state, CancellationToken cancellationToken)
 			: this(action, state, cancellationToken, JobCreationOptions.None, null, null)
 		{
 		}
-		public Job(Action<Object> action, Object? state, JobCreationOptions creationOptions)
+		public Job(Action<Object?> action, Object? state, JobCreationOptions creationOptions)
 			: this(action, state, CancellationToken.None, creationOptions, null, null)
 		{
 		}
-		public Job(Action<Object> action, Object? state, CancellationToken cancellationToken, 
-			JobCreationOptions creationOptions, IJobScheduler scheduler)
+		public Job(Action<Object?> action, Object? state, CancellationToken cancellationToken, 
+			JobCreationOptions creationOptions, IJobScheduler? scheduler)
 			: this(action, state, cancellationToken, creationOptions, scheduler, null)
 		{
 		}
@@ -69,7 +70,7 @@ namespace Armat.Threading
 		{
 			// Special constructor for JobStatus.Completed job
 			// We're calling the generic constructor to initialize Id = 0
-			System.Diagnostics.Debug.Assert(status == JobStatus.RanToCompletion);
+			Debug.Assert(status == JobStatus.RanToCompletion);
 			Id = COMPLTETED_JOB_ID;
 
 			Procedure = NoAction;
@@ -332,7 +333,7 @@ namespace Armat.Threading
 		{
 			get
 			{
-				return AsyncWaitHandleSlim?.WaitHandle;
+				return AsyncWaitHandleSlim.WaitHandle;
 			}
 		}
 
@@ -356,7 +357,7 @@ namespace Armat.Threading
 		public void Run()
 		{
 			// determine the job scheduler for the current job
-			IJobScheduler scheduler = Scheduler;
+			IJobScheduler? scheduler = Scheduler;
 			if (scheduler == null)
 			{
 				if ((CreationOptions & JobCreationOptions.HideScheduler) == JobCreationOptions.HideScheduler)
@@ -365,7 +366,7 @@ namespace Armat.Threading
 				}
 				else
 				{
-					Job owner = Initiator ?? Current;
+					Job? owner = Initiator ?? Current;
 					if (owner != null)
 						scheduler = owner.Scheduler ?? IJobScheduler.Default;
 					else
@@ -380,7 +381,7 @@ namespace Armat.Threading
 			// ensure it will run synchronously
 			_executionOptions |= (Int32)JobCreationOptions.RunSynchronously;
 
-			// run it now
+			// will run it instantaneously
 			Run();
 
 			// throw immediately if there's an error
@@ -391,7 +392,7 @@ namespace Armat.Threading
 			if (jobScheduler == null)
 				throw new ArgumentNullException(nameof(jobScheduler));
 
-			Job detectedInitiator = Initiator;
+			Job? detectedInitiator = Initiator;
 			if (detectedInitiator == null)
 			{
 				// be careful assigning the initiator
@@ -421,7 +422,7 @@ namespace Armat.Threading
 			}
 
 			// set job execution scope
-			// JobMethodBulder runtime context is set in JobMethodBuilder class itself
+			// JobMethodBuilder runtime context is set in JobMethodBuilder class itself
 			if (!IsMethodBuilderResult)
 			{
 				if (detectedInitiator != null)
@@ -444,7 +445,7 @@ namespace Armat.Threading
 				//		no exception handling
 				//		no continuation
 
-				Job prevCurrent = Current;
+				Job? prevCurrent = Current;
 				try
 				{
 					Current = this;
@@ -460,7 +461,7 @@ namespace Armat.Threading
 		public Boolean Cancel()
 		{
 			Boolean canceled = false;
-			IJobScheduler scheduler = Scheduler;
+			IJobScheduler? scheduler = Scheduler;
 
 			if (scheduler != null)
 			{
@@ -478,10 +479,10 @@ namespace Armat.Threading
 
 		internal protected void AppendException(Exception exc)
 		{
-			System.Diagnostics.Debug.Assert(exc != null);
+			Debug.Assert(exc != null);
 
 			if (_listExceptions == null)
-				Interlocked.CompareExchange<List<ExceptionDispatchInfo>>(ref _listExceptions, new List<ExceptionDispatchInfo>(), null);
+				Interlocked.CompareExchange<List<ExceptionDispatchInfo>?>(ref _listExceptions, new List<ExceptionDispatchInfo>(), null);
 
 			lock (_listExceptions)
 			{
@@ -507,19 +508,22 @@ namespace Armat.Threading
 		}
 		internal protected virtual void ResetStatus()
 		{
-			ManualResetEventSlim waitHandle = _waitHandle;
+			ManualResetEventSlim? waitHandle = _waitHandle;
 			if (waitHandle != null)
 				waitHandle.Reset();
 
-			List<ExceptionDispatchInfo> listExceptions = _listExceptions;
+			List<ExceptionDispatchInfo>? listExceptions = _listExceptions;
 			if (listExceptions != null)
 			{
 				lock (listExceptions)
 				{
-					listExceptions.Clear();
+					if (listExceptions == _listExceptions)
+					{
+						listExceptions.Clear();
 
-					_exception = null;
-					_listExceptions = null;
+						_exception = null;
+						_listExceptions = null;
+					}
 				}
 			}
 
@@ -530,7 +534,7 @@ namespace Armat.Threading
 		internal JobStatus ExecuteProcedure()
 		{
 			JobStatus result = JobStatus.Created;
-			Job prevJob = Current;
+			Job? prevJob = Current;
 			Current = this;
 
 			try
@@ -538,9 +542,7 @@ namespace Armat.Threading
 				// execute the current procedure
 				result = ExecuteProcedureCore();
 			}
-#pragma warning disable CA1031 // Do not catch general exception types
 			catch (Exception /*exc*/) { }
-#pragma warning restore CA1031 // Do not catch general exception types
 			finally
 			{
 				Current = prevJob;
@@ -551,7 +553,7 @@ namespace Armat.Threading
 		internal Int32 ExecuteContinuations()
 		{
 			Int32 result = 0;
-			Job prevJob = Current;
+			Job? prevJob = Current;
 			Current = this;
 
 			try
@@ -559,9 +561,7 @@ namespace Armat.Threading
 				// execute continuations
 				result = ExecuteContinuationsCore(Status);
 			}
-#pragma warning disable CA1031 // Do not catch general exception types
 			catch (Exception /*exc*/) { }
-#pragma warning restore CA1031 // Do not catch general exception types
 			finally
 			{
 				Current = prevJob;
@@ -571,9 +571,7 @@ namespace Armat.Threading
 		}
 		internal protected void SignalCompletion()
 		{
-			ManualResetEventSlim waitHandle = _waitHandle;
-			if (waitHandle != null)
-				waitHandle.Set();
+			_waitHandle?.Set();
 		}
 
 		protected JobStatus ExecuteProcedureCore()
@@ -608,7 +606,6 @@ namespace Armat.Threading
 					result = JobStatus.RanToCompletion;
 				}
 			}
-#pragma warning disable CA1031 // Do not catch general exception types
 			catch (OperationCanceledException /*exc*/)
 			{
 				// cancellation is not a fault. Do not set the exception.
@@ -622,7 +619,6 @@ namespace Armat.Threading
 				UpdateStatus(JobStatus.Faulted);
 				result = JobStatus.Faulted;
 			}
-#pragma warning restore CA1031 // Do not catch general exception types
 
 			// Run attached continuations job
 			if (canRunChildren)
@@ -643,7 +639,6 @@ namespace Armat.Threading
 					UpdateStatus(JobStatus.RanToCompletion);
 					result = JobStatus.RanToCompletion;
 				}
-#pragma warning disable CA1031 // Do not catch general exception types
 				catch (OperationCanceledException /*exc*/)
 				{
 					// cancellation is not a fault. Do not set the exception.
@@ -656,7 +651,6 @@ namespace Armat.Threading
 					UpdateStatus(JobStatus.Faulted);
 					result = JobStatus.Faulted;
 				}
-#pragma warning restore CA1031 // Do not catch general exception types
 			}
 
 			// if there's a waiter for completion, trigger it
@@ -664,18 +658,18 @@ namespace Armat.Threading
 
 			return result;
 		}
-		protected Int32 ExecuteContinuationsCore(JobStatus executaionStatus)
+		protected Int32 ExecuteContinuationsCore(JobStatus executionStatus)
 		{
 			// note: do not extend the continuation base index so those will be processed
 			// later on upcoming ExecuteContinuations call
-			Boolean extendContinuationBaseIndex = executaionStatus >= JobStatus.RanToCompletion;
-			IReadOnlyCollection<Job> continuations = GetPendingContinuations(extendContinuationBaseIndex);
+			Boolean extendContinuationBaseIndex = executionStatus >= JobStatus.RanToCompletion;
+			IReadOnlyCollection<Job>? continuations = GetPendingContinuations(extendContinuationBaseIndex);
 			if (continuations == null || continuations.Count == 0)
 				return 0;
 
 			// determine async and sync continuation jobs to run
 			JobCreationOptions creationOptions = CreationOptions;
-			IReadOnlyCollection<Job> asyncJobs = null, syncJobs = null;
+			IReadOnlyCollection<Job>? asyncJobs = null, syncJobs = null;
 			Int32 ranJobCounter = 0;
 
 			foreach (Job job in continuations)
@@ -689,20 +683,20 @@ namespace Armat.Threading
 				JobContinuationOptions continuationOptions = job.ContinuationOptions;
 
 				// check if the continuation should run
-				if (!CanRunContinuation(executaionStatus, continuationOptions))
+				if (!CanRunContinuation(executionStatus, continuationOptions))
 					continue;
 
 				// in state of JobStatus.WaitingForChildrenToComplete we should only run attached children synchronously
-				if (executaionStatus == JobStatus.WaitingForChildrenToComplete)
+				if (executionStatus == JobStatus.WaitingForChildrenToComplete)
 				{
 					// this condition should be checked in ExecuteProcedureCore() method before calling tis one
-					System.Diagnostics.Debug.Assert((creationOptions & JobCreationOptions.DenyChildAttach) != JobCreationOptions.DenyChildAttach);
+					Debug.Assert((creationOptions & JobCreationOptions.DenyChildAttach) != JobCreationOptions.DenyChildAttach);
 
 					// only attached continuations (children) should be executed
 					if ((continuationOptions & JobContinuationOptions.AttachedToParent) != JobContinuationOptions.AttachedToParent)
 						continue;
 				}
-				else if (executaionStatus < JobStatus.RanToCompletion)
+				else if (executionStatus < JobStatus.RanToCompletion)
 				{
 					// the call should not reach here in any other state
 					throw new InvalidOperationException("Cannot run continuations of not completed task");
@@ -713,13 +707,13 @@ namespace Armat.Threading
 					if (syncJobs == null)
 					{
 						if (continuations.Count == 1)
-							syncJobs = continuations;               // minor optimization in case if there's only one job to run
+							syncJobs = continuations;						// minor optimization in case if there's only one job to run
 						else
-							syncJobs = new List<Job>() { job };     // create a new list for continuations
+							syncJobs = new IndigentList<Job>() { job };     // create a new list for continuations
 					}
 					else
 					{
-						((List<Job>)syncJobs).Add(job);             // add another continuation
+						((IList<Job>)syncJobs).Add(job);						// add another continuation
 					}
 				}
 				else
@@ -729,11 +723,11 @@ namespace Armat.Threading
 						if (continuations.Count == 1)
 							asyncJobs = continuations;               // minor optimization in case if there's only one job to run
 						else
-							asyncJobs = new List<Job>() { job };     // create a new list for continuations
+							asyncJobs = new IndigentList<Job>() { job };     // create a new list for continuations
 					}
 					else
 					{
-						((List<Job>)asyncJobs).Add(job);             // add another continuation
+						((IList<Job>)asyncJobs).Add(job);             // add another continuation
 					}
 				}
 			}
@@ -744,7 +738,7 @@ namespace Armat.Threading
 				foreach (Job job in asyncJobs)
 				{
 					// check if the continuation should still run
-					if (!CanRunContinuation(executaionStatus, job.ContinuationOptions))
+					if (!CanRunContinuation(executionStatus, job.ContinuationOptions))
 						continue;
 
 					try
@@ -752,9 +746,7 @@ namespace Armat.Threading
 						job.Run();
 						ranJobCounter++;
 					}
-#pragma warning disable CA1031 // Do not catch general exception types
 					catch (Exception exc)
-#pragma warning restore CA1031 // Do not catch general exception types
 					{
 						AppendException(exc);
 					}
@@ -767,7 +759,7 @@ namespace Armat.Threading
 				foreach (Job job in syncJobs)
 				{
 					// check if the continuation should still run
-					if (!CanRunContinuation(executaionStatus, job.ContinuationOptions))
+					if (!CanRunContinuation(executionStatus, job.ContinuationOptions))
 						continue;
 
 					try
@@ -775,9 +767,7 @@ namespace Armat.Threading
 						job.Run();
 						ranJobCounter++;
 					}
-#pragma warning disable CA1031 // Do not catch general exception types
 					catch (Exception exc)
-#pragma warning restore CA1031 // Do not catch general exception types
 					{
 						AppendException(exc);
 					}
@@ -785,7 +775,7 @@ namespace Armat.Threading
 			}
 
 			// wait for async children to complete
-			if (asyncJobs != null && executaionStatus == JobStatus.WaitingForChildrenToComplete)
+			if (asyncJobs != null && executionStatus == JobStatus.WaitingForChildrenToComplete)
 			{
 				foreach (Job job in asyncJobs)
 				{
@@ -795,9 +785,7 @@ namespace Armat.Threading
 						job.ThrowIfCompletedUnexpectedly(true);
 
 					}
-#pragma warning disable CA1031 // Do not catch general exception types
 					catch (Exception exc)
-#pragma warning restore CA1031 // Do not catch general exception types
 					{
 						AppendException(exc);
 					}
@@ -809,7 +797,7 @@ namespace Armat.Threading
 		protected virtual void ExecuteProcedureImpl()
 		{
 			// Invoke the delegate
-			System.Diagnostics.Debug.Assert(Procedure != null, "Null Procedure in ExecuteProcedureImpl()");
+			Debug.Assert(Procedure != null, "Null Procedure in ExecuteProcedureImpl()");
 
 			if (Procedure is Action action)
 			{
@@ -817,19 +805,19 @@ namespace Armat.Threading
 				return;
 			}
 
-			if (Procedure is Action<Object> actionWithState)
+			if (Procedure is Action<Object?> actionWithState)
 			{
 				actionWithState(AsyncState);
 				return;
 			}
 
-			System.Diagnostics.Debug.Fail("Invalid Procedure in Job");
+			Debug.Fail("Invalid Procedure in Job");
 		}
 		protected virtual void ExecuteContinuationImpl()
 		{
 			// Invoke the delegate
-			System.Diagnostics.Debug.Assert(Initiator != null, "Null Initiator in Job.ExecuteContinuationImpl()");
-			System.Diagnostics.Debug.Assert(Procedure != null, "Null Procedure in Job.ExecuteContinuationImpl()");
+			Debug.Assert(Initiator != null, "Null Initiator in Job.ExecuteContinuationImpl()");
+			Debug.Assert(Procedure != null, "Null Procedure in Job.ExecuteContinuationImpl()");
 
 			if (Procedure is Action awaitAction)
 			{
@@ -845,14 +833,14 @@ namespace Armat.Threading
 				return;
 			}
 
-			if (Procedure is Action<Job, Object> actionWithState)
+			if (Procedure is Action<Job, Object?> actionWithState)
 			{
 				// See ContinueWith(Action<Job, Object> continuationAction, Object state, ...) methods
 				actionWithState(Initiator, AsyncState);
 				return;
 			}
 
-			System.Diagnostics.Debug.Fail("Invalid Procedure in Continuation Job");
+			Debug.Fail("Invalid Procedure in Continuation Job");
 		}
 		protected virtual void ExecuteAwaitContinuationImpl(Action awaitAction)
 		{
@@ -860,7 +848,7 @@ namespace Armat.Threading
 				(CreationOptions & JobCreationOptions.RunSynchronously) == JobCreationOptions.RunSynchronously);
 		}
 
-		protected void ThrowIfCompletedUnexpectedly(Boolean thowInnerException)
+		protected void ThrowIfCompletedUnexpectedly(Boolean throwInnerException)
 		{
 			if (CancellationToken.IsCancellationRequested || IsCanceled)
 			{
@@ -868,20 +856,20 @@ namespace Armat.Threading
 			}
 			else
 			{
-				List<ExceptionDispatchInfo> listExceptions = _listExceptions;
+				List<ExceptionDispatchInfo>? listExceptions = _listExceptions;
 				if (listExceptions != null)
 				{
 					lock (listExceptions)
 					{
-						if (thowInnerException && listExceptions.Count == 1)
+						if (throwInnerException && listExceptions.Count == 1)
 							listExceptions[0].Throw();
 						else
-							throw Exception;
+							throw Exception!;   // exception is never null when _listExceptions != null
 					}
 				}
 			}
 		}
-		protected static void ExecuteAction(Action awaitAction, AwaiterConfiguration configuration, Boolean runSynchronously)
+		protected static void ExecuteAction(Action awaitAction, AwaiterConfiguration? configuration, Boolean runSynchronously)
 		{
 			if (awaitAction == null)
 				throw new ArgumentNullException(nameof(awaitAction));
@@ -902,16 +890,19 @@ namespace Armat.Threading
 				awaitAction();
 			}
 		}
-		private static void ActionExecutorProc(Object action)
+		private static void ActionExecutorProc(Object? action)
 		{
-			((Action)action)();
+			if (action is Action fn)
+				fn();
+			else
+				Debug.Assert(false, "ActionExecutorProc should be called with an \"Action\" parameter");
 		}
 		private static readonly SendOrPostCallback _fnActionExecutorSendOrPostCallback = new(ActionExecutorProc);
 		private static readonly ContextCallback _fnActionExecutorContextCallback = new(ActionExecutorProc);
 
-		private IReadOnlyCollection<Job> GetPendingContinuations(Boolean extendContinuationsBaseIndex)
+		private IReadOnlyCollection<Job>? GetPendingContinuations(Boolean extendContinuationsBaseIndex)
 		{
-			IndigentList<Job> listContinuations = _continuations;
+			IndigentList<Job>? listContinuations = _continuations;
 			if (listContinuations == null)
 			{
 				// this will mark continuations executed once
@@ -920,7 +911,7 @@ namespace Armat.Threading
 				return null;
 			}
 
-			Job[] arrContinuations = null;
+			Job[]? arrContinuations = null;
 			lock (listContinuations)
 			{
 				if (_execContinuationsBaseIndex <= 0)
@@ -942,21 +933,21 @@ namespace Armat.Threading
 
 			return arrContinuations;
 		}
-		private Boolean CanRunContinuation(JobStatus executaionStatus, JobContinuationOptions continuationOptions)
+		private Boolean CanRunContinuation(JobStatus executionStatus, JobContinuationOptions continuationOptions)
 		{
 			if ((continuationOptions & JobContinuationOptions.NotOnRanToCompletion) == JobContinuationOptions.NotOnRanToCompletion)
 			{
-				if (executaionStatus == JobStatus.RanToCompletion)
+				if (executionStatus == JobStatus.RanToCompletion)
 					return false;
 			}
 			if ((continuationOptions & JobContinuationOptions.NotOnCanceled) == JobContinuationOptions.NotOnCanceled)
 			{
-				if (executaionStatus == JobStatus.Canceled || CancellationToken.IsCancellationRequested)
+				if (executionStatus == JobStatus.Canceled || CancellationToken.IsCancellationRequested)
 					return false;
 			}
 			if ((continuationOptions & JobContinuationOptions.NotOnFaulted) == JobContinuationOptions.NotOnFaulted)
 			{
-				if (executaionStatus == JobStatus.Faulted || Exception != null)
+				if (executionStatus == JobStatus.Faulted || Exception != null)
 					return false;
 			}
 
@@ -1063,7 +1054,7 @@ namespace Armat.Threading
 		{
 			return ContinueWith((Delegate)continuationAction, null, CancellationToken.None, ToContinuationOptions(CreationOptions), null);
 		}
-		public Job ContinueWith(Action<Job> continuationAction, IJobScheduler scheduler)
+		public Job ContinueWith(Action<Job> continuationAction, IJobScheduler? scheduler)
 		{
 			return ContinueWith((Delegate)continuationAction, null, CancellationToken.None, ToContinuationOptions(CreationOptions), scheduler);
 		}
@@ -1075,28 +1066,28 @@ namespace Armat.Threading
 		{
 			return ContinueWith((Delegate)continuationAction, null, CancellationToken.None, continuationOptions, null);
 		}
-		public Job ContinueWith(Action<Job> continuationAction, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		public Job ContinueWith(Action<Job> continuationAction, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			return ContinueWith((Delegate)continuationAction, null, cancellationToken, continuationOptions, scheduler);
 		}
 
-		public Job ContinueWith(Action<Job, Object> continuationAction, Object state)
+		public Job ContinueWith(Action<Job, Object?> continuationAction, Object? state)
 		{
 			return ContinueWith((Delegate)continuationAction, state, CancellationToken.None, ToContinuationOptions(CreationOptions), null);
 		}
-		public Job ContinueWith(Action<Job, Object> continuationAction, Object state, IJobScheduler scheduler)
+		public Job ContinueWith(Action<Job, Object?> continuationAction, Object? state, IJobScheduler? scheduler)
 		{
 			return ContinueWith((Delegate)continuationAction, state, CancellationToken.None, ToContinuationOptions(CreationOptions), scheduler);
 		}
-		public Job ContinueWith(Action<Job, Object> continuationAction, Object state, CancellationToken cancellationToken)
+		public Job ContinueWith(Action<Job, Object?> continuationAction, Object? state, CancellationToken cancellationToken)
 		{
 			return ContinueWith((Delegate)continuationAction, state, cancellationToken, ToContinuationOptions(CreationOptions), null);
 		}
-		public Job ContinueWith(Action<Job, Object> continuationAction, Object state, JobContinuationOptions continuationOptions)
+		public Job ContinueWith(Action<Job, Object?> continuationAction, Object? state, JobContinuationOptions continuationOptions)
 		{
 			return ContinueWith((Delegate)continuationAction, state, CancellationToken.None, continuationOptions, null);
 		}
-		public Job ContinueWith(Action<Job, Object> continuationAction, Object state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		public Job ContinueWith(Action<Job, Object?> continuationAction, Object? state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			return ContinueWith((Delegate)continuationAction, state, cancellationToken, continuationOptions, scheduler);
 		}
@@ -1105,7 +1096,7 @@ namespace Armat.Threading
 		{
 			return ContinueWith<TResult>((Delegate)continuationFunction, null, CancellationToken.None, ToContinuationOptions(CreationOptions), null);
 		}
-		public Job<TResult> ContinueWith<TResult>(Func<Job, TResult> continuationFunction, IJobScheduler scheduler)
+		public Job<TResult> ContinueWith<TResult>(Func<Job, TResult> continuationFunction, IJobScheduler? scheduler)
 		{
 			return ContinueWith<TResult>((Delegate)continuationFunction, null, CancellationToken.None, ToContinuationOptions(CreationOptions), scheduler);
 		}
@@ -1117,28 +1108,28 @@ namespace Armat.Threading
 		{
 			return ContinueWith<TResult>((Delegate)continuationFunction, null, CancellationToken.None, continuationOptions, null);
 		}
-		public Job<TResult> ContinueWith<TResult>(Func<Job, TResult> continuationFunction, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		public Job<TResult> ContinueWith<TResult>(Func<Job, TResult> continuationFunction, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			return ContinueWith<TResult>((Delegate)continuationFunction, null, cancellationToken, continuationOptions, scheduler);
 		}
 
-		public Job<TResult> ContinueWith<TResult>(Func<Job, Object, TResult> continuationFunction, Object state)
+		public Job<TResult> ContinueWith<TResult>(Func<Job, Object?, TResult> continuationFunction, Object? state)
 		{
 			return ContinueWith<TResult>((Delegate)continuationFunction, state, CancellationToken.None, ToContinuationOptions(CreationOptions), null);
 		}
-		public Job<TResult> ContinueWith<TResult>(Func<Job, Object, TResult> continuationFunction, Object state, IJobScheduler scheduler)
+		public Job<TResult> ContinueWith<TResult>(Func<Job, Object?, TResult> continuationFunction, Object? state, IJobScheduler? scheduler)
 		{
 			return ContinueWith<TResult>((Delegate)continuationFunction, state, CancellationToken.None, ToContinuationOptions(CreationOptions), scheduler);
 		}
-		public Job<TResult> ContinueWith<TResult>(Func<Job, Object, TResult> continuationFunction, Object state, CancellationToken cancellationToken)
+		public Job<TResult> ContinueWith<TResult>(Func<Job, Object?, TResult> continuationFunction, Object? state, CancellationToken cancellationToken)
 		{
 			return ContinueWith<TResult>((Delegate)continuationFunction, state, cancellationToken, ToContinuationOptions(CreationOptions), null);
 		}
-		public Job<TResult> ContinueWith<TResult>(Func<Job, Object, TResult> continuationFunction, Object state, JobContinuationOptions continuationOptions)
+		public Job<TResult> ContinueWith<TResult>(Func<Job, Object?, TResult> continuationFunction, Object? state, JobContinuationOptions continuationOptions)
 		{
 			return ContinueWith<TResult>((Delegate)continuationFunction, state, CancellationToken.None, continuationOptions, null);
 		}
-		public Job<TResult> ContinueWith<TResult>(Func<Job, Object, TResult> continuationFunction, Object state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		public Job<TResult> ContinueWith<TResult>(Func<Job, Object?, TResult> continuationFunction, Object? state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			return ContinueWith<TResult>((Delegate)continuationFunction, state, cancellationToken, continuationOptions, scheduler);
 		}
@@ -1156,7 +1147,7 @@ namespace Armat.Threading
 			//JobCreationOptions creationOptions = ToCreationOptions(continuationOptions);
 			//return new Job((Delegate)continuation, configuration, CancellationToken, creationOptions, JobScheduler, this);
 		}
-		protected Job ContinueWith(Delegate procedure, Object state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		protected Job ContinueWith(Delegate procedure, Object? state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			// create the job
 			JobCreationOptions creationOptions = ToCreationOptions(continuationOptions);
@@ -1166,7 +1157,7 @@ namespace Armat.Threading
 
 			return job;
 		}
-		protected Job<TResult> ContinueWith<TResult>(Delegate procedure, Object state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		protected Job<TResult> ContinueWith<TResult>(Delegate procedure, Object? state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			// create the job
 			JobCreationOptions creationOptions = ToCreationOptions(continuationOptions);
@@ -1183,14 +1174,10 @@ namespace Armat.Threading
 		}
 		protected virtual void RegisterContinuation(Job job, JobContinuationOptions extraOptions)
 		{
-			if (job == null)
-				throw new ArgumentNullException(nameof(job));
-
-			// TODO: in 90% of cases there will be only one continuation, so we could keep a single Job instead.
-
 			// allocate the list
+			// In 90% of cases there will be only one continuation, so we keep a single Job instead of an array.
 			if (_continuations == null)
-				Interlocked.CompareExchange<IndigentList<Job>>(ref _continuations, new IndigentList<Job>(), null);
+				Interlocked.CompareExchange<IndigentList<Job>?>(ref _continuations, new IndigentList<Job>(), null);
 
 			// add the item
 			lock (_continuations)
@@ -1204,7 +1191,7 @@ namespace Armat.Threading
 					// the continuations are already executed and this one is left over
 					// calling ExecuteContinuations will ensure to process this one as well
 					// that also means that the current task has completed it's execution
-					System.Diagnostics.Debug.Assert(Status > JobStatus.Running);
+					Debug.Assert(Status > JobStatus.Running);
 					ExecuteContinuations();
 				}
 			}
@@ -1257,9 +1244,9 @@ namespace Armat.Threading
 		[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>")]
 		public class AwaiterConfiguration
 		{
-			private ExecutionContext _executionContext = null;
+			private ExecutionContext? _executionContext = null;
 			private Boolean _isExecutionContextSet = false;
-			private SynchronizationContext _synchronizationContext = null;
+			private SynchronizationContext? _synchronizationContext = null;
 			private Boolean _isSynchronizationContextSet = false;
 			private Boolean _attachedToParent = false;
 
@@ -1270,7 +1257,7 @@ namespace Armat.Threading
 
 			public Job Job { get; }
 
-			public ExecutionContext ExecutionContext
+			public ExecutionContext? ExecutionContext
 			{
 				get { return _executionContext; }
 				internal set { _executionContext = value; _isExecutionContextSet = true; }
@@ -1290,7 +1277,7 @@ namespace Armat.Threading
 				_isExecutionContextSet = false;
 			}
 
-			public SynchronizationContext SynchronizationContext
+			public SynchronizationContext? SynchronizationContext
 			{
 				get { return _synchronizationContext; }
 				internal set { _synchronizationContext = value; _isSynchronizationContextSet = true; }
@@ -1317,8 +1304,6 @@ namespace Armat.Threading
 			}
 		}
 
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>")]
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "<Pending>")]
 		public readonly struct ConfiguredAwaiter
 		{
 			internal ConfiguredAwaiter(Job owner)
@@ -1346,15 +1331,15 @@ namespace Armat.Threading
 
 				return this;
 			}
-			public ConfiguredAwaiter ContinueOnExecutionContext(ExecutionContext executaionContext)
+			public ConfiguredAwaiter ContinueOnExecutionContext(ExecutionContext executionContext)
 			{
-				Configuration.ExecutionContext = executaionContext;
+				Configuration.ExecutionContext = executionContext;
 
 				return this;
 			}
-			public ConfiguredAwaiter ContinueOnSynchronizationContext(SynchronizationContext synchroniztaionContext)
+			public ConfiguredAwaiter ContinueOnSynchronizationContext(SynchronizationContext synchronizationContext)
 			{
-				Configuration.SynchronizationContext = synchroniztaionContext;
+				Configuration.SynchronizationContext = synchronizationContext;
 
 				return this;
 			}
@@ -1366,8 +1351,6 @@ namespace Armat.Threading
 			}
 		}
 
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>")]
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "<Pending>")]
 		public readonly struct Awaiter :
 			System.Runtime.CompilerServices.INotifyCompletion,
 			System.Runtime.CompilerServices.ICriticalNotifyCompletion,
@@ -1417,7 +1400,7 @@ namespace Armat.Threading
 			{
 				if (continuation == null)
 				{
-					System.Diagnostics.Debug.Assert(false);
+					Debug.Assert(false);
 					throw new ArgumentNullException(nameof(continuation));
 				}
 
@@ -1464,7 +1447,7 @@ namespace Armat.Threading
 
 			return result;
 		}
-		public static Job Run(Action action, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler)
+		public static Job Run(Action action, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler? scheduler)
 		{
 			Job result = new(action, cancellationToken, creationOptions, scheduler);
 
@@ -1473,7 +1456,7 @@ namespace Armat.Threading
 			return result;
 		}
 
-		public static Job Run(Action<Object> action, Object state)
+		public static Job Run(Action<Object?> action, Object? state)
 		{
 			Job result = new(action, state);
 
@@ -1481,7 +1464,7 @@ namespace Armat.Threading
 
 			return result;
 		}
-		public static Job Run(Action<Object> action, Object state, CancellationToken cancellationToken)
+		public static Job Run(Action<Object?> action, Object? state, CancellationToken cancellationToken)
 		{
 			Job result = new(action, state, cancellationToken);
 
@@ -1489,7 +1472,7 @@ namespace Armat.Threading
 
 			return result;
 		}
-		public static Job Run(Action<Object> action, Object state, JobCreationOptions creationOptions)
+		public static Job Run(Action<Object?> action, Object? state, JobCreationOptions creationOptions)
 		{
 			Job result = new(action, state, creationOptions);
 
@@ -1497,7 +1480,7 @@ namespace Armat.Threading
 
 			return result;
 		}
-		public static Job Run(Action<Object> action, Object state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler)
+		public static Job Run(Action<Object?> action, Object? state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler? scheduler)
 		{
 			Job result = new(action, state, cancellationToken, creationOptions, scheduler);
 
@@ -1530,7 +1513,7 @@ namespace Armat.Threading
 
 			return result;
 		}
-		public static Job<TResult> Run<TResult>(Func<TResult> function, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler)
+		public static Job<TResult> Run<TResult>(Func<TResult> function, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler? scheduler)
 		{
 			Job<TResult> result = new(function, cancellationToken, creationOptions, scheduler);
 
@@ -1539,7 +1522,7 @@ namespace Armat.Threading
 			return result;
 		}
 
-		public static Job<TResult> Run<TResult>(Func<Object, TResult> function, Object state)
+		public static Job<TResult> Run<TResult>(Func<Object?, TResult> function, Object? state)
 		{
 			Job<TResult> result = new(function, state);
 
@@ -1547,7 +1530,7 @@ namespace Armat.Threading
 
 			return result;
 		}
-		public static Job<TResult> Run<TResult>(Func<Object, TResult> function, Object state, CancellationToken cancellationToken)
+		public static Job<TResult> Run<TResult>(Func<Object?, TResult> function, Object? state, CancellationToken cancellationToken)
 		{
 			Job<TResult> result = new(function, state, cancellationToken);
 
@@ -1555,7 +1538,7 @@ namespace Armat.Threading
 
 			return result;
 		}
-		public static Job<TResult> Run<TResult>(Func<Object, TResult> function, Object state, JobCreationOptions creationOptions)
+		public static Job<TResult> Run<TResult>(Func<Object?, TResult> function, Object? state, JobCreationOptions creationOptions)
 		{
 			Job<TResult> result = new(function, state, creationOptions);
 
@@ -1563,7 +1546,7 @@ namespace Armat.Threading
 
 			return result;
 		}
-		public static Job<TResult> Run<TResult>(Func<Object, TResult> function, Object state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler)
+		public static Job<TResult> Run<TResult>(Func<Object?, TResult> function, Object? state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler? scheduler)
 		{
 			Job<TResult> result = new(function, state, cancellationToken, creationOptions, scheduler);
 
@@ -1581,16 +1564,10 @@ namespace Armat.Threading
 		{
 			throw new InvalidOperationException();
 		}
-		private static Action _noAction = null;
+		private static readonly Action _noAction = new (ActionNotSetProc);
 		protected static Action NoAction
 		{
-			get
-			{
-				if (_noAction == null)
-					Interlocked.CompareExchange<Action>(ref _noAction, new Action(ActionNotSetProc), null);
-
-				return _noAction;
-			}
+			get { return _noAction; }
 		}
 
 		public static Job CompletedJob
@@ -1681,7 +1658,7 @@ namespace Armat.Threading
 
 		public static void WaitAll(params Job[] jobs)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return;
 
 			foreach (Job job in jobs)
@@ -1691,7 +1668,7 @@ namespace Armat.Threading
 		}
 		public static Boolean WaitAll(Job[] jobs, Int32 millisecondsTimeout)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return true;
 
 			Stopwatch sw = Stopwatch.StartNew();
@@ -1707,7 +1684,7 @@ namespace Armat.Threading
 		}
 		public static void WaitAll(Job[] jobs, CancellationToken cancellationToken)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return;
 
 			foreach (Job job in jobs)
@@ -1717,7 +1694,7 @@ namespace Armat.Threading
 		}
 		public static Boolean WaitAll(Job[] jobs, Int32 millisecondsTimeout, CancellationToken cancellationToken)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return true;
 
 			Stopwatch sw = Stopwatch.StartNew();
@@ -1733,7 +1710,7 @@ namespace Armat.Threading
 		}
 		public static Boolean WaitAll(Job[] jobs, TimeSpan timeout)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return true;
 
 			Stopwatch sw = Stopwatch.StartNew();
@@ -1750,7 +1727,7 @@ namespace Armat.Threading
 
 		public static Int32 WaitAny(params Job[] jobs)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return -1;
 
 			Int32 count = jobs.Length;
@@ -1778,7 +1755,7 @@ namespace Armat.Threading
 		}
 		public static Int32 WaitAny(Job[] jobs, Int32 millisecondsTimeout)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return -1;
 
 			Int32 count = jobs.Length;
@@ -1806,7 +1783,7 @@ namespace Armat.Threading
 		}
 		public static Int32 WaitAny(Job[] jobs, CancellationToken cancellationToken)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return -1;
 
 			Int32 count = jobs.Length;
@@ -1839,7 +1816,7 @@ namespace Armat.Threading
 		}
 		public static Int32 WaitAny(Job[] jobs, Int32 millisecondsTimeout, CancellationToken cancellationToken)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return -1;
 
 			Int32 count = jobs.Length;
@@ -1872,7 +1849,7 @@ namespace Armat.Threading
 		}
 		public static Int32 WaitAny(Job[] jobs, TimeSpan timeout)
 		{
-			if (jobs == null || jobs.Length == 0)
+			if (jobs.Length == 0)
 				return -1;
 
 			Int32 count = jobs.Length;
@@ -1901,74 +1878,42 @@ namespace Armat.Threading
 
 		public static Job WhenAll(params Job[] jobs)
 		{
-			if (jobs == null)
-				throw new ArgumentNullException(nameof(jobs));
-
 			return WhenAll(jobs, jobs.Length);
 		}
 		public static Job WhenAll(IEnumerable<Job> jobs)
 		{
-			if (jobs == null)
-				throw new ArgumentNullException(nameof(jobs));
-
-			Int32 jobsCount = jobs.Count();
-
-			return WhenAll(jobs, jobsCount);
+			return WhenAll(jobs, jobs.Count());
 		}
 		public static Job<TResult[]> WhenAll<TResult>(params Job<TResult>[] jobs)
 		{
-			if (jobs == null)
-				throw new ArgumentNullException(nameof(jobs));
-
 			return WhenAll(jobs, jobs.Length);
 		}
 		public static Job<TResult[]> WhenAll<TResult>(IEnumerable<Job<TResult>> jobs)
 		{
-			if (jobs == null)
-				throw new ArgumentNullException(nameof(jobs));
-
-			Int32 jobsCount = jobs.Count();
-
-			return WhenAll(jobs, jobsCount);
+			return WhenAll(jobs, jobs.Count());
 		}
 		public static Job<Job> WhenAny(params Job[] jobs)
 		{
-			if (jobs == null)
-				throw new ArgumentNullException(nameof(jobs));
-
 			return WhenAny(jobs, jobs.Length);
 		}
 		public static Job<Job> WhenAny(IEnumerable<Job> jobs)
 		{
-			if (jobs == null)
-				throw new ArgumentNullException(nameof(jobs));
-
-			Int32 jobsCount = jobs.Count();
-
-			return WhenAny(jobs, jobsCount);
+			return WhenAny(jobs, jobs.Count());
 		}
 		public static Job<Job<TResult>> WhenAny<TResult>(params Job<TResult>[] jobs)
 		{
-			if (jobs == null)
-				throw new ArgumentNullException(nameof(jobs));
-
 			return WhenAny(jobs, jobs.Length);
 		}
 		public static Job<Job<TResult>> WhenAny<TResult>(IEnumerable<Job<TResult>> jobs)
 		{
-			if (jobs == null)
-				throw new ArgumentNullException(nameof(jobs));
-
-			Int32 jobsCount = jobs.Count();
-
-			return WhenAny(jobs, jobsCount);
+			return WhenAny(jobs, jobs.Count());
 		}
 
 		#region Internal implementation for WhenAll & WhenAny
 
-		private static IEnumerable<Exception> GetJobsExceptions(IEnumerable<Job> jobs)
+		private static IEnumerable<Exception>? GetJobsExceptions(IEnumerable<Job> jobs)
 		{
-			List<Exception> exceptions = null;
+			List<Exception>? exceptions = null;
 			Exception exc;
 
 			foreach (Job jobCompleted in jobs)
@@ -2006,7 +1951,8 @@ namespace Armat.Threading
 					return job;
 			}
 
-			return null;
+			Debug.Assert(false, "list of JObs cannot be empty");
+			return Job.CompletedJob;
 		}
 
 		private static Job WhenAll(IEnumerable<Job> jobs, Int32 jobsCount)
@@ -2019,7 +1965,7 @@ namespace Armat.Threading
 				// at this point execution of all jobs is complete
 
 				// add the exceptions (if any) to the waiter job aggregate exception list
-				IEnumerable<Exception> exceptions = GetJobsExceptions(jobs);
+				IEnumerable<Exception>? exceptions = GetJobsExceptions(jobs);
 				if (exceptions != null)
 					throw new TransientAggregateException(exceptions);
 			});
@@ -2058,7 +2004,7 @@ namespace Armat.Threading
 				// at this point execution of all jobs is complete
 
 				// add the exceptions (if any) to the waiter job aggregate exception list
-				IEnumerable<Exception> exceptions = GetJobsExceptions(jobs);
+				IEnumerable<Exception>? exceptions = GetJobsExceptions(jobs);
 				if (exceptions != null)
 					throw new TransientAggregateException(exceptions);
 
@@ -2101,7 +2047,7 @@ namespace Armat.Threading
 				Job jobCompleted = GetAnyCompletedJob(jobs);
 
 				// add the exception (if any) to the waiter job aggregate exception list
-				Exception exception = jobCompleted.Exception;
+				Exception? exception = jobCompleted.Exception;
 				if (exception != null)
 					throw new TransientAggregateException(exception);
 
@@ -2143,7 +2089,7 @@ namespace Armat.Threading
 				Job<TResult> jobCompleted = (Job<TResult>)GetAnyCompletedJob(jobs);
 
 				// add the exception (if any) to the waiter job aggregate exception list
-				Exception exception = jobCompleted.Exception;
+				Exception? exception = jobCompleted.Exception;
 				if (exception != null)
 					throw new TransientAggregateException(exception);
 
@@ -2209,24 +2155,24 @@ namespace Armat.Threading
 			: this(function, null, CancellationToken.None, creationOptions, null, null)
 		{
 		}
-		public Job(Func<TResult> function, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler)
+		public Job(Func<TResult> function, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler? scheduler)
 			: this(function, null, cancellationToken, creationOptions, scheduler, null)
 		{
 		}
 
-		public Job(Func<Object, TResult> function, Object state)
+		public Job(Func<Object?, TResult> function, Object? state)
 			: this(function, state, CancellationToken.None, JobCreationOptions.None, null, null)
 		{
 		}
-		public Job(Func<Object, TResult> function, Object state, CancellationToken cancellationToken)
+		public Job(Func<Object?, TResult> function, Object? state, CancellationToken cancellationToken)
 			: this(function, state, cancellationToken, JobCreationOptions.None, null, null)
 		{
 		}
-		public Job(Func<Object, TResult> function, Object state, JobCreationOptions creationOptions)
+		public Job(Func<Object?, TResult> function, Object? state, JobCreationOptions creationOptions)
 			: this(function, state, CancellationToken.None, creationOptions, null, null)
 		{
 		}
-		public Job(Func<Object, TResult> function, Object state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler)
+		public Job(Func<Object?, TResult> function, Object? state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler? scheduler)
 			: this(function, state, cancellationToken, creationOptions, scheduler, null)
 		{
 		}
@@ -2262,7 +2208,7 @@ namespace Armat.Threading
 			UpdateStatus(JobStatus.RanToCompletion);
 			_result = result;
 		}
-		internal Job(Delegate procedure, Object state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler scheduler, Job initiator)
+		internal Job(Delegate procedure, Object? state, CancellationToken cancellationToken, JobCreationOptions creationOptions, IJobScheduler? scheduler, Job? initiator)
 			: base(procedure, state, cancellationToken, creationOptions, scheduler, initiator)
 		{
 		}
@@ -2271,7 +2217,7 @@ namespace Armat.Threading
 
 		#region Data Members & Properties
 
-		private TResult _result;
+		private TResult? _result = default;
 		public TResult Result
 		{
 			get
@@ -2282,9 +2228,10 @@ namespace Armat.Threading
 				return GetResult();
 			}
 		}
-		internal TResult GetResult()
+		private TResult GetResult()
 		{
-			return _result;
+			// this is called ONLY once the Job is completed successfully!
+			return _result!;
 		}
 		internal void SetResult(TResult result)
 		{
@@ -2295,16 +2242,10 @@ namespace Armat.Threading
 		{
 			throw new InvalidOperationException();
 		}
-		private static Func<TResult> _noFunction = null;
+		private static Func<TResult> _noFunction = new Func<TResult>(FunctionNotSetProc);
 		protected static Func<TResult> NoFunction
 		{
-			get
-			{
-				if (_noFunction == null)
-					Interlocked.CompareExchange<Func<TResult>>(ref _noFunction, new Func<TResult>(FunctionNotSetProc), null);
-
-				return _noFunction;
-			}
+			get { return _noFunction; }
 		}
 
 		#endregion // Data Members & Properties
@@ -2321,7 +2262,7 @@ namespace Armat.Threading
 		protected override void ExecuteProcedureImpl()
 		{
 			// Invoke the delegate
-			System.Diagnostics.Debug.Assert(Procedure != null, "Null Procedure in Job<TResult>.ExecuteProcedureImpl()");
+			Debug.Assert(Procedure != null, "Null Procedure in Job<TResult>.ExecuteProcedureImpl()");
 
 			if (Procedure is Func<TResult> function)
 			{
@@ -2329,20 +2270,20 @@ namespace Armat.Threading
 				return;
 			}
 
-			if (Procedure is Func<Object, TResult> functionWithState)
+			if (Procedure is Func<Object?, TResult> functionWithState)
 			{
 				SetResult(functionWithState(AsyncState));
 				return;
 			}
 
-			System.Diagnostics.Debug.Fail("Invalid Procedure in Job");
+			Debug.Fail("Invalid Procedure in Job");
 		}
 
 		protected override void ExecuteContinuationImpl()
 		{
 			// Invoke the delegate
-			System.Diagnostics.Debug.Assert(Initiator != null, "Null Initiator in Job<TResult>.ExecuteContinuationImpl()");
-			System.Diagnostics.Debug.Assert(Procedure != null, "Null Procedure in Job<TResult>.ExecuteContinuationImpl()");
+			Debug.Assert(Initiator != null, "Null Initiator in Job<TResult>.ExecuteContinuationImpl()");
+			Debug.Assert(Procedure != null, "Null Procedure in Job<TResult>.ExecuteContinuationImpl()");
 
 			if (Procedure is Action awaitAction)
 			{
@@ -2358,14 +2299,14 @@ namespace Armat.Threading
 				return;
 			}
 
-			if (Procedure is Func<Job, Object, TResult> functionWithState)
+			if (Procedure is Func<Job, Object?, TResult> functionWithState)
 			{
 				// See ContinueWith(Func<Job, Object, TResult> continuationFunction, Object state, ...) methods
 				SetResult(functionWithState(Initiator, AsyncState));
 				return;
 			}
 
-			System.Diagnostics.Debug.Fail("Invalid Procedure in Continuation Job");
+			Debug.Fail("Invalid Procedure in Continuation Job");
 		}
 
 		#endregion// Run
@@ -2376,7 +2317,7 @@ namespace Armat.Threading
 		{
 			return base.ContinueWith(j => continuationAction((Job<TResult>)j));
 		}
-		public Job ContinueWith(Action<Job<TResult>> continuationAction, IJobScheduler scheduler)
+		public Job ContinueWith(Action<Job<TResult>> continuationAction, IJobScheduler? scheduler)
 		{
 			return base.ContinueWith(j => continuationAction((Job<TResult>)j), scheduler);
 		}
@@ -2388,28 +2329,28 @@ namespace Armat.Threading
 		{
 			return base.ContinueWith(j => continuationAction((Job<TResult>)j), continuationOptions);
 		}
-		public Job ContinueWith(Action<Job<TResult>> continuationAction, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		public Job ContinueWith(Action<Job<TResult>> continuationAction, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			return base.ContinueWith(j => continuationAction((Job<TResult>)j), cancellationToken, continuationOptions, scheduler);
 		}
 
-		public Job ContinueWith(Action<Job<TResult>, Object> continuationAction, Object state)
+		public Job ContinueWith(Action<Job<TResult>, Object?> continuationAction, Object? state)
 		{
 			return base.ContinueWith((j, s) => continuationAction((Job<TResult>)j, s), state);
 		}
-		public Job ContinueWith(Action<Job<TResult>, Object> continuationAction, Object state, IJobScheduler scheduler)
+		public Job ContinueWith(Action<Job<TResult>, Object?> continuationAction, Object? state, IJobScheduler? scheduler)
 		{
 			return base.ContinueWith((j, s) => continuationAction((Job<TResult>)j, s), state, scheduler);
 		}
-		public Job ContinueWith(Action<Job<TResult>, Object> continuationAction, Object state, CancellationToken cancellationToken)
+		public Job ContinueWith(Action<Job<TResult>, Object?> continuationAction, Object? state, CancellationToken cancellationToken)
 		{
 			return base.ContinueWith((j, s) => continuationAction((Job<TResult>)j, s), state, cancellationToken);
 		}
-		public Job ContinueWith(Action<Job<TResult>, Object> continuationAction, Object state, JobContinuationOptions continuationOptions)
+		public Job ContinueWith(Action<Job<TResult>, Object?> continuationAction, Object? state, JobContinuationOptions continuationOptions)
 		{
 			return base.ContinueWith((j, s) => continuationAction((Job<TResult>)j, s), state, continuationOptions);
 		}
-		public Job ContinueWith(Action<Job<TResult>, Object> continuationAction, Object state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		public Job ContinueWith(Action<Job<TResult>, Object?> continuationAction, Object? state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			return base.ContinueWith((j, s) => continuationAction((Job<TResult>)j, s), state, cancellationToken, continuationOptions, scheduler);
 		}
@@ -2418,7 +2359,7 @@ namespace Armat.Threading
 		{
 			return base.ContinueWith<TNewResult>(j => continuationFunction((Job<TResult>)j));
 		}
-		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, TNewResult> continuationFunction, IJobScheduler scheduler)
+		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, TNewResult> continuationFunction, IJobScheduler? scheduler)
 		{
 			return base.ContinueWith<TNewResult>(j => continuationFunction((Job<TResult>)j), scheduler);
 		}
@@ -2430,28 +2371,28 @@ namespace Armat.Threading
 		{
 			return base.ContinueWith<TNewResult>(j => continuationFunction((Job<TResult>)j), continuationOptions);
 		}
-		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, TNewResult> continuationFunction, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, TNewResult> continuationFunction, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			return base.ContinueWith<TNewResult>(j => continuationFunction((Job<TResult>)j), cancellationToken, continuationOptions, scheduler);
 		}
 
-		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object, TNewResult> continuationFunction, Object state)
+		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object?, TNewResult> continuationFunction, Object? state)
 		{
 			return base.ContinueWith<TNewResult>((j, s) => continuationFunction((Job<TResult>)j, s), state);
 		}
-		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object, TNewResult> continuationFunction, Object state, IJobScheduler scheduler)
+		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object?, TNewResult> continuationFunction, Object? state, IJobScheduler? scheduler)
 		{
 			return base.ContinueWith<TNewResult>((j, s) => continuationFunction((Job<TResult>)j, s), state, scheduler);
 		}
-		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object, TNewResult> continuationFunction, Object state, CancellationToken cancellationToken)
+		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object?, TNewResult> continuationFunction, Object? state, CancellationToken cancellationToken)
 		{
 			return base.ContinueWith<TNewResult>((j, s) => continuationFunction((Job<TResult>)j, s), state, cancellationToken);
 		}
-		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object, TNewResult> continuationFunction, Object state, JobContinuationOptions continuationOptions)
+		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object?, TNewResult> continuationFunction, Object? state, JobContinuationOptions continuationOptions)
 		{
 			return base.ContinueWith<TNewResult>((j, s) => continuationFunction((Job<TResult>)j, s), state, continuationOptions);
 		}
-		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object, TNewResult> continuationFunction, Object state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler scheduler)
+		public Job<TNewResult> ContinueWith<TNewResult>(Func<Job<TResult>, Object?, TNewResult> continuationFunction, Object? state, CancellationToken cancellationToken, JobContinuationOptions continuationOptions, IJobScheduler? scheduler)
 		{
 			return base.ContinueWith<TNewResult>((j, s) => continuationFunction((Job<TResult>)j, s), state, cancellationToken, continuationOptions, scheduler);
 		}
@@ -2503,15 +2444,15 @@ namespace Armat.Threading
 
 				return this;
 			}
-			public ConfiguredAwaiterT ContinueOnExecutionContext(ExecutionContext executaionContext)
+			public ConfiguredAwaiterT ContinueOnExecutionContext(ExecutionContext executionContext)
 			{
-				Configuration.ExecutionContext = executaionContext;
+				Configuration.ExecutionContext = executionContext;
 
 				return this;
 			}
-			public ConfiguredAwaiterT ContinueOnSynchronizationContext(SynchronizationContext synchroniztaionContext)
+			public ConfiguredAwaiterT ContinueOnSynchronizationContext(SynchronizationContext synchronizationContext)
 			{
-				Configuration.SynchronizationContext = synchroniztaionContext;
+				Configuration.SynchronizationContext = synchronizationContext;
 
 				return this;
 			}
@@ -2550,7 +2491,7 @@ namespace Armat.Threading
 			public Boolean IsCompleted { get { return Job.IsCompleted; } }
 			public TResult GetResult()
 			{
-				Job.GetResult();
+				//Job.GetResult();
 
 				return Job.Result;
 			}

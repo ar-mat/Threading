@@ -6,12 +6,13 @@ namespace Armat.Threading
 {
 	public sealed class JobRuntimeScope : IDisposable
 	{
-		public static JobRuntimeScope Enter(String key, Func<Object> factory)
+		// enters a scope with a given key
+		// it will keep the returned object by the factory while executing a code running within the scope
+		// in case the scope key is already used, it will return JobRuntimeScope.Null
+		public static JobRuntimeScope Enter(String key, Func<Object?> factory)
 		{
-			if (String.IsNullOrEmpty(key))
+			if (key.Length == 0)
 				throw new ArgumentException("JobRuntimeScope key cannot be empty", nameof(key));
-			if (factory == null)
-				throw new ArgumentNullException(nameof(factory));
 
 			// check if it's already within the scope
 			ThreadRuntimeContext context = ThreadRuntimeContext.GetOrCreateCurrent();
@@ -19,39 +20,37 @@ namespace Armat.Threading
 				return Null;
 
 			// create the scope
-			JobRuntimeScope scope = new()
+			JobRuntimeScope scope = new(key, factory)
 			{
-				Key = key,
-				Factory = factory,
 				_capturedContext = context
 			};
 
 			// register the scope
-			if (!context.Enter(scope))
+			if (!context.AddScope(scope))
 				scope._capturedContext = null;
 
 			return scope;
 		}
 		public static JobRuntimeScope Enter<T>(Func<T> factory)
+			where T : class
 		{
-			if (factory == null)
-				throw new ArgumentNullException(nameof(factory));
-
-			return Enter(typeof(T).FullName, () => factory());
+			return Enter(typeof(T).FullName!, () => factory());
 		}
 
-		public static T GetObject<T>() where T : class
+		public static T? GetObject<T>()
+			where T : class
 		{
-			return GetObject(typeof(T).FullName) as T;
+			return GetObject(typeof(T).FullName!) as T;
 		}
-		public static T GetObject<T>(String key) where T : class
+		public static T? GetObject<T>(String key)
+			where T : class
 		{
 			return GetObject(key) as T;
 		}
-		public static Object GetObject(String key)
+		public static Object? GetObject(String key)
 		{
 			// lookup for the object in the current job's scope
-			Object result = Job.Current?.RuntimeContext.GetScope(key)?.GetObject();
+			Object? result = Job.Current?.RuntimeContext.GetScope(key)?.GetObject();
 			if (result == null)
 			{
 				// check if the object is set in the thread runtime context
@@ -61,28 +60,30 @@ namespace Armat.Threading
 			return result;
 		}
 
-		private JobRuntimeScope()
+		private JobRuntimeScope(String key, Func<Object?> factory)
 		{
+			Key = key;
+			Factory = factory;
 		}
 		public void Dispose()
 		{
 			if (_capturedContext == null)
 				return;
 
-			_capturedContext.Leave(Key);
+			_capturedContext.RemoveScope(Key);
 			_capturedContext = null;
 		}
 
-		public static readonly JobRuntimeScope Null = new();
+		public static readonly JobRuntimeScope Null = new(String.Empty, () => null);
 		public Boolean IsNull => _capturedContext == null;
 
 		public String Key { get; private set; }
-		public Func<Object> Factory { get; private set; }
+		public Func<Object?> Factory { get; private set; }
 
-		private ThreadRuntimeContext _capturedContext = null;
+		private ThreadRuntimeContext? _capturedContext = null;
 
-		private Object _runtimeObject = null;
-		public Object GetObject()
+		private Object? _runtimeObject = null;
+		public Object? GetObject()
 		{
 			// try to get
 			if (_runtimeObject != null)
@@ -99,7 +100,7 @@ namespace Armat.Threading
 		}
 	}
 
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "<Pending>")]
+	// JobRuntimeContext class holds list of JobRuntimeScope objects within a given job execution context
 	public struct JobRuntimeContext
 	{
 		private Dictionary<String, JobRuntimeScope> _currentScopes;
@@ -114,9 +115,9 @@ namespace Armat.Threading
 		{
 			get { return _currentScopes == null || _currentScopes.Count == 0; }
 		}
-		public JobRuntimeScope GetScope(String key)
+		public readonly JobRuntimeScope? GetScope(String key)
 		{
-			if (_currentScopes != null && _currentScopes.TryGetValue(key, out JobRuntimeScope scope))
+			if (_currentScopes != null && _currentScopes.TryGetValue(key, out JobRuntimeScope? scope))
 				return scope;
 
 			return null;
@@ -126,15 +127,15 @@ namespace Armat.Threading
 		// returns number of scopes in the context
 		public Int32 Capture()
 		{
-			// merger with the current thread context
-			ThreadRuntimeContext currentThreadContext = ThreadRuntimeContext.Current;
+			// merges with the current thread context
+			ThreadRuntimeContext? currentThreadContext = ThreadRuntimeContext.Current;
 			if (currentThreadContext == null)
 				return 0;
 
 			IReadOnlyCollection<JobRuntimeScope> currentThreadScopes = currentThreadContext.Scopes;
 			Int32 result = 0;
 
-			if (currentThreadScopes != null && currentThreadScopes.Count > 0)
+			if (currentThreadScopes.Count > 0)
 			{
 				foreach (JobRuntimeScope scope in currentThreadScopes)
 				{
@@ -166,6 +167,8 @@ namespace Armat.Threading
 		}
 	}
 
+	// Thread runtime context keeps a map of key -> JobRuntimeScope objects
+	// There's a unique ThreadRuntimeContext instance per each thread
 	public class ThreadRuntimeContext
 	{
 		private Dictionary<String, JobRuntimeScope> _currentScopes;
@@ -177,39 +180,38 @@ namespace Armat.Threading
 
 		public Boolean IsEmpty
 		{
-			get { return _currentScopes == null || _currentScopes.Count == 0; }
+			get { return _currentScopes.Count == 0; }
 		}
 		public IReadOnlyCollection<JobRuntimeScope> Scopes
 		{
-			get { return _currentScopes?.Values; }
+			get { return _currentScopes.Values; }
 		}
 
 		public Boolean Contains(String key)
 		{
-			return _currentScopes != null && _currentScopes.ContainsKey(key);
+			return _currentScopes.ContainsKey(key);
 		}
-		public JobRuntimeScope GetScope(String key)
+		public JobRuntimeScope? GetScope(String key)
 		{
-			if (_currentScopes != null && _currentScopes.TryGetValue(key, out JobRuntimeScope scope))
+			if (_currentScopes.TryGetValue(key, out JobRuntimeScope? scope))
 				return scope;
 
 			return null;
 		}
 
-		public Boolean Enter(JobRuntimeScope scope)
+		public Boolean AddScope(JobRuntimeScope scope)
 		{
-			if (scope == null || scope.IsNull)
+			if (scope.IsNull)
 				throw new ArgumentException("JobRuntimeScope.Enter failed", nameof(scope));
 
-			if (_currentScopes == null)
-				_currentScopes = new Dictionary<String, JobRuntimeScope>();
+			_currentScopes ??= new Dictionary<String, JobRuntimeScope>();
 
 			_currentScopes.Add(scope.Key, scope);
-			JobMethodBuilderContext.Enter(scope);
+			JobMethodBuilderContext.AddScope(scope);
 
 			return true;
 		}
-		public Boolean Leave(String key)
+		public Boolean RemoveScope(String key)
 		{
 			if (_currentScopes == null)
 				return false;
@@ -217,14 +219,14 @@ namespace Armat.Threading
 			if (!_currentScopes.Remove(key))
 				return false;
 
-			JobMethodBuilderContext.Leave(key);
+			JobMethodBuilderContext.RemoveScope(key);
 			return true;
 		}
 
 		[ThreadStatic]
-		private static ThreadRuntimeContext _current;
+		private static ThreadRuntimeContext? _current;
 
-		public static ThreadRuntimeContext Current
+		public static ThreadRuntimeContext? Current
 		{
 			get
 			{
@@ -233,31 +235,30 @@ namespace Armat.Threading
 		}
 		public static ThreadRuntimeContext GetOrCreateCurrent()
 		{
-			if (_current == null)
-				_current = new ThreadRuntimeContext();
+			_current ??= new ThreadRuntimeContext();
 
 			return _current;
 		}
 	}
 
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "<Pending>")]
+	// created with each JobMethodBuilder to collect and reset list of scopes 
+	// within the context of async method execution
 	public struct JobMethodBuilderContext : IDisposable
 	{
 		[ThreadStatic]
-		private static Stack<JobMethodBuilderContext> _jmbStack;
+		private static Stack<JobMethodBuilderContext>? _jmbStack;
 
-		private List<JobRuntimeScope> _listScopes;
+		private List<JobRuntimeScope>? _listScopes;
 
 		public JobMethodBuilderContext()
 		{
 			_listScopes = null;
 
-			if (_jmbStack == null)
-				_jmbStack = new Stack<JobMethodBuilderContext>();
+			_jmbStack ??= new Stack<JobMethodBuilderContext>();
 			_jmbStack.Push(this);
 		}
 
-		public static Boolean Enter(JobRuntimeScope scope)
+		public static Boolean AddScope(JobRuntimeScope scope)
 		{
 			if (_jmbStack == null || _jmbStack.Count == 0)
 				return false;
@@ -266,46 +267,47 @@ namespace Armat.Threading
 			JobMethodBuilderContext cxt = _jmbStack.Peek();
 			if (cxt._listScopes == null)
 			{
-				// the structure member _listScopes is being changed
+				// data member _listScopes of a structure is being changed
 				cxt = _jmbStack.Pop();
-				result = cxt.EnterImpl(scope);
+				result = cxt.AddImpl(scope);
 				_jmbStack.Push(cxt);
 			}
 			else
 			{
-				result = cxt.EnterImpl(scope);
+				// add element to the list
+				result = cxt.AddImpl(scope);
 			}
 
 			return result;
 		}
-		public static Boolean Leave(String key)
+		public static Boolean RemoveScope(String key)
 		{
 			if (_jmbStack == null || _jmbStack.Count == 0)
 				return false;
 
 			JobMethodBuilderContext cxt = _jmbStack.Peek();
-			Boolean result = cxt.LeaveImpl(key);
+			Boolean result = cxt.RemoveImpl(key);
 
 			return result;
 		}
 
-		private Boolean EnterImpl(JobRuntimeScope scope)
+		private Boolean AddImpl(JobRuntimeScope scope)
 		{
 			if (scope == null || scope.IsNull)
-				throw new ArgumentException("JobMethodBuilderContext.Enter failed", nameof(scope));
+				return false;
 
-			if (_listScopes == null)
-				_listScopes = new List<JobRuntimeScope>();
-
+			_listScopes ??= new List<JobRuntimeScope>();
 			_listScopes.Add(scope);
+
 			return true;
 		}
-		private Boolean LeaveImpl(String key)
+		private Boolean RemoveImpl(String key)
 		{
 			if (_listScopes == null)
 				return false;
 
-			for (Int32 i = 0; i < _listScopes.Count; i++)
+			// most probably the last one added should be removed first
+			for (Int32 i = _listScopes.Count - 1; i >= 0; i--)
 			{
 				if (_listScopes[i].Key == key)
 				{
@@ -322,7 +324,7 @@ namespace Armat.Threading
 				return;
 
 			// get current thread runtime context
-			ThreadRuntimeContext currentThreadRuntimeContext = ThreadRuntimeContext.Current;
+			ThreadRuntimeContext? currentThreadRuntimeContext = ThreadRuntimeContext.Current;
 			if (currentThreadRuntimeContext == null)
 			{
 				System.Diagnostics.Debug.Assert(false, "ThreadRuntimeContext.Current cannot be null while there are scopes registered in JobMethodBuilderContext");
