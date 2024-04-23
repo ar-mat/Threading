@@ -10,7 +10,6 @@ namespace Armat.Threading
 	}
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "<Pending>")]
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "<Pending>")]
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "<Pending>")]
 	public struct JobMethodBuilder
 	{
@@ -139,9 +138,9 @@ namespace Armat.Threading
 				return _runtimeContext;
 
 			// capture current job context or thread context
-			Job currentjob = Job.Current;
-			if (currentjob != null)
-				_runtimeContext.Capture(currentjob.RuntimeContext);
+			Job? currentJob = Job.Current;
+			if (currentJob != null)
+				_runtimeContext.Capture(currentJob.RuntimeContext);
 			else
 				_runtimeContext.Capture();
 
@@ -167,7 +166,7 @@ namespace Armat.Threading
 				{
 					if (Procedure == (Delegate)NoAction)
 					{
-						Procedure = new Action(value.MoveNext);
+						Procedure = (Action)value.MoveNext;
 					}
 					else
 					{
@@ -176,7 +175,7 @@ namespace Armat.Threading
 				}
 				get
 				{
-					return (IAsyncStateMachine)((Action)Procedure)?.Target;
+					return (IAsyncStateMachine)((Action)Procedure)?.Target!;
 				}
 			}
 
@@ -218,7 +217,7 @@ namespace Armat.Threading
 			{
 				// AsyncState is used to store Awaiter Configuration to be used for executing the action.
 				// See implementation of ExecuteAwaitContinuationImpl method for more details
-				AwaiterConfiguration config = new(null);
+				AwaiterConfiguration config = new(this);
 				config.CaptureExecutionContext();
 
 				AsyncState = config;
@@ -370,9 +369,9 @@ namespace Armat.Threading
 				return _runtimeContext;
 
 			// capture current job context or thread context
-			Job currentjob = Job.Current;
-			if (currentjob != null)
-				_runtimeContext.Capture(currentjob.RuntimeContext);
+			Job? currentJob = Job.Current;
+			if (currentJob != null)
+				_runtimeContext.Capture(currentJob.RuntimeContext);
 			else
 				_runtimeContext.Capture();
 
@@ -398,7 +397,7 @@ namespace Armat.Threading
 				{
 					if (Procedure == (Delegate)NoFunction)
 					{
-						Procedure = new Action(value.MoveNext);
+						Procedure = (Action)value.MoveNext;
 					}
 					else
 					{
@@ -407,7 +406,7 @@ namespace Armat.Threading
 				}
 				get
 				{
-					return (IAsyncStateMachine)((Action)Procedure)?.Target;
+					return (IAsyncStateMachine)((Action)Procedure)?.Target!;
 				}
 			}
 
@@ -449,7 +448,7 @@ namespace Armat.Threading
 			{
 				// AsyncState is used to store Awaiter Configuration to be used for executing the action.
 				// See implementation of ExecuteAwaitContinuationImpl method for more details
-				AwaiterConfiguration config = new(null);
+				AwaiterConfiguration config = new(this);
 				config.CaptureExecutionContext();
 
 				AsyncState = config;

@@ -7,8 +7,9 @@ namespace Armat.Threading
 	public sealed class JobRuntimeScope : IDisposable
 	{
 		// enters a scope with a given key
-		// it will keep the returned object by the factory while executing a code running within the scope
-		// in case the scope key is already used, it will return JobRuntimeScope.Null
+		// it will keep the returned value from the factory method while executing a code running within the scope
+		// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
+		// the value will not be instantiated by the factory it's already running within a scope with same key
 		public static JobRuntimeScope Enter(String key, Func<Object?> factory)
 		{
 			if (key.Length == 0)
@@ -20,7 +21,7 @@ namespace Armat.Threading
 				return Null;
 
 			// create the scope
-			JobRuntimeScope scope = new(key, factory)
+			JobRuntimeScope scope = new(key, factory())
 			{
 				_capturedContext = context
 			};
@@ -31,39 +32,58 @@ namespace Armat.Threading
 
 			return scope;
 		}
+		// enters a scope for a given key
+		// it will keep the returned value from the factory method while executing a code running within the scope
+		// in case the key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
+		// the value will not be instantiated by the factory it's already running within a scope with same key
+		public static JobRuntimeScope Enter<T>(String key, Func<T> factory)
+			where T : class
+		{
+			return Enter(key, () => factory());
+		}
+		// enters a scope for a given T type
+		// it will keep the returned value from the factory method while executing a code running within the scope
+		// in case the T type is already used, it will return JobRuntimeScope.Null and the value won't be constructed
+		// the value will not be instantiated by the factory it's already running within a scope with same T type
 		public static JobRuntimeScope Enter<T>(Func<T> factory)
 			where T : class
 		{
 			return Enter(typeof(T).FullName!, () => factory());
 		}
 
-		public static T? GetObject<T>()
+		// returns the scoped value corresponding to the given T type within
+		// the current JobRuntimeContext or ThreadRuntimeContext
+		public static T? GetValue<T>()
 			where T : class
 		{
-			return GetObject(typeof(T).FullName!) as T;
+			return GetValue(typeof(T).FullName!) as T;
 		}
-		public static T? GetObject<T>(String key)
+		// returns the scoped value corresponding to the given key within
+		// the current JobRuntimeContext or ThreadRuntimeContext
+		public static T? GetValue<T>(String key)
 			where T : class
 		{
-			return GetObject(key) as T;
+			return GetValue(key) as T;
 		}
-		public static Object? GetObject(String key)
+		// returns the scoped value corresponding to the given key within
+		// the current JobRuntimeContext or ThreadRuntimeContext
+		public static Object? GetValue(String key)
 		{
-			// lookup for the object in the current job's scope
-			Object? result = Job.Current?.RuntimeContext.GetScope(key)?.GetObject();
-			if (result == null)
+			// lookup for the scope in the current job's runtime context
+			JobRuntimeScope? scope = Job.Current?.RuntimeContext.GetScope(key);
+			if (scope == null)
 			{
-				// check if the object is set in the thread runtime context
-				result = ThreadRuntimeContext.Current?.GetScope(key)?.GetObject();
+				// check if the scope is available in the thread runtime context
+				scope = ThreadRuntimeContext.Current?.GetScope(key);
 			}
 
-			return result;
+			return scope?.Value;
 		}
 
-		private JobRuntimeScope(String key, Func<Object?> factory)
+		private JobRuntimeScope(String key, Object? value)
 		{
 			Key = key;
-			Factory = factory;
+			Value = value;
 		}
 		public void Dispose()
 		{
@@ -74,33 +94,16 @@ namespace Armat.Threading
 			_capturedContext = null;
 		}
 
-		public static readonly JobRuntimeScope Null = new(String.Empty, () => null);
+		public static readonly JobRuntimeScope Null = new(String.Empty, null);
 		public Boolean IsNull => _capturedContext == null;
 
-		public String Key { get; private set; }
-		public Func<Object?> Factory { get; private set; }
+		public String Key { get; init; }
+		public Object? Value { get; init; }
 
 		private ThreadRuntimeContext? _capturedContext = null;
-
-		private Object? _runtimeObject = null;
-		public Object? GetObject()
-		{
-			// try to get
-			if (_runtimeObject != null)
-				return _runtimeObject;
-
-			// create
-			lock (this)
-			{
-				if (_runtimeObject == null)
-					_runtimeObject = Factory();
-			}
-
-			return _runtimeObject;
-		}
 	}
 
-	// JobRuntimeContext class holds list of JobRuntimeScope objects within a given job execution context
+	// JobRuntimeContext class holds collection of JobRuntimeScope objects within a given Job execution context
 	public struct JobRuntimeContext
 	{
 		private Dictionary<String, JobRuntimeScope> _currentScopes;

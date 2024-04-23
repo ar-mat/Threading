@@ -1241,7 +1241,6 @@ namespace Armat.Threading
 			return new ConfiguredAwaiter(this).ContinueOnCapturedContext(continueOnCapturedContext);
 		}
 
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>")]
 		public class AwaiterConfiguration
 		{
 			private ExecutionContext? _executionContext = null;
@@ -2287,6 +2286,7 @@ namespace Armat.Threading
 
 			if (Procedure is Action awaitAction)
 			{
+				// See JobMethodBuilder.ResultJob.StateMachine.set, JobMethodBuilderT<TResult>.ResultJob.StateMachine.set
 				// See SetAwaiterContinuation(Action continuation, JobAwaiterConfiguration configuration) method
 				ExecuteAwaitContinuationImpl(awaitAction);
 				return;
@@ -2415,8 +2415,6 @@ namespace Armat.Threading
 			return new ConfiguredAwaiterT(this).ContinueOnCapturedContext(continueOnCapturedContext);
 		}
 
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>")]
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "<Pending>")]
 		public readonly struct ConfiguredAwaiterT
 		{
 			internal ConfiguredAwaiterT(Job<TResult> owner)
@@ -2467,8 +2465,6 @@ namespace Armat.Threading
 		//
 		// Summary:
 		//     Provides an object that waits for the completion of an asynchronous job.
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "<Pending>")]
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "<Pending>")]
 		public readonly struct AwaiterT :
 			System.Runtime.CompilerServices.INotifyCompletion,
 			System.Runtime.CompilerServices.ICriticalNotifyCompletion,

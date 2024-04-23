@@ -4,95 +4,69 @@ using System.Collections.Generic;
 
 namespace Armat.Threading
 {
+	// the class represents a scope for asynchronous execution
+	// is auto-generates correlation IDs to be able to trace asynchronous code execution flow
+	// a name can be added to AsyncExecutionScope object optionally for easier identification
 	public class AsyncExecutionScope
 	{
-		protected AsyncExecutionScope(String message)
+		protected AsyncExecutionScope()
 		{
-			Message = message;
-			_correlationID = -1;
+			Name = String.Empty;
+			CorrelationID = GetNextCorrelationId();
+		}
+		protected AsyncExecutionScope(String name)
+		{
+			Name = name;
+			CorrelationID = GetNextCorrelationId();
 		}
 
 		// Key used to create JobRuntimeScope objects
-		public static readonly String JobRuntimeScopeKey = typeof(AsyncExecutionScope).FullName;
+		public static readonly String JobRuntimeScopeKey = typeof(AsyncExecutionScope).FullName!;
 
-		public static JobRuntimeScope Create(String message)
+		// creates a JobRuntimeScope with AsyncExecutionScope value
+		public static JobRuntimeScope Create()
 		{
-			return JobRuntimeScope.Enter(JobRuntimeScopeKey, () => new AsyncExecutionScope(message));
+			return Create(JobRuntimeScopeKey, () => new AsyncExecutionScope());
 		}
-		public static AsyncExecutionScope Current()
+		// creates a JobRuntimeScope with named AsyncExecutionScope value
+		public static JobRuntimeScope Create(String name)
 		{
-			return JobRuntimeScope.GetObject<AsyncExecutionScope>(JobRuntimeScopeKey);
+			return Create(JobRuntimeScopeKey, () => new AsyncExecutionScope(name));
 		}
 
-		// Message to be appended to the correlation ID
-		public String Message { get; }
+		// creates a JobRuntimeScope with the given key and AsyncExecutionScope value returned by the factory
+		// this method can be used by derived classed to create a JobRuntimeScope
+		protected static JobRuntimeScope Create(String runtimeScopeKey, Func<AsyncExecutionScope> factory)
+		{
+			return JobRuntimeScope.Enter(runtimeScopeKey, factory);
+		}
+
+		// returns the current AsyncExecutionScope if any, or null otherwise
+		public static AsyncExecutionScope? Current()
+		{
+			return JobRuntimeScope.GetValue<AsyncExecutionScope>(JobRuntimeScopeKey);
+		}
+
+		// Name to be appended to the correlation ID if not empty
+		public String Name { get; init; }
 
 		// Numeric auto-incrementing Correlation ID
-		private Int64 _correlationID;
-		public Int64 CorrelationID
-		{
-			get
-			{
-				if (_correlationID == -1)
-				{
-					lock (this)
-					{
-						if (_correlationID == -1)
-							_correlationID = GetNextCorrelationId();
-					}
-				}
-
-				return _correlationID;
-			}
-		}
+		public Int64 CorrelationID { get; init; }
 
 		// Asynchronous Method Tracer key - generally used for logging
 		public override String ToString()
 		{
-			if (String.IsNullOrEmpty(Message))
+			if (String.IsNullOrEmpty(Name))
 				return String.Format("{0:00000000000000000000}", CorrelationID);
 
-			return String.Format("{0:00000000000000000000}:{1}", CorrelationID, Message);
+			return String.Format("{0:00000000000000000000}:{1}", CorrelationID, Name);
 		}
 
 		// Correlation ID generator
-		private static readonly Utils.Counter _corrIdCounter = new(0);
-		protected virtual Int64 GetNextCorrelationId()
+		private static readonly Utils.Counter _correlationIdCounter = new(0);
+		private static Int64 GetNextCorrelationId()
 		{
-			return _corrIdCounter.Increment();
-		}
-	}
-
-	public class AsyncExecutionScope<T> : AsyncExecutionScope
-	{
-		protected AsyncExecutionScope() : base(typeof(T).FullName)
-		{
-		}
-		protected AsyncExecutionScope(String message) : base(message)
-		{
-		}
-
-		// Key used to create JobRuntimeScope objects (separate key for every generic T type)
-		public static readonly new String JobRuntimeScopeKey = typeof(AsyncExecutionScope<T>).FullName;
-
-		public static JobRuntimeScope Create()
-		{
-			return JobRuntimeScope.Enter(JobRuntimeScopeKey, () => new AsyncExecutionScope<T>());
-		}
-		public static new JobRuntimeScope Create(String message)
-		{
-			return JobRuntimeScope.Enter(JobRuntimeScopeKey, () => new AsyncExecutionScope<T>(message));
-		}
-		public static new AsyncExecutionScope<T> Current()
-		{
-			return JobRuntimeScope.GetObject<AsyncExecutionScope<T>>(JobRuntimeScopeKey);
-		}
-
-		// Correlation ID generator (separate counter for every generic T type)
-		private static readonly Utils.Counter _corrIdCounter = new(0);
-		protected override Int64 GetNextCorrelationId()
-		{
-			return _corrIdCounter.Increment();
+			return _correlationIdCounter.Increment();
 		}
 	}
 }
