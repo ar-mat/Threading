@@ -1,105 +1,89 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Armat.Threading
+namespace Armat.Threading;
+
+// abstract base class for IJobScheduler implementations
+// it's holding / managing the Default and Current Job Schedulers
+public abstract class JobSchedulerBase : IJobScheduler
 {
-	// abstract base class for IJobScheduler implementations
-	// it's holding / managing the Default and Current Job Schedulers
-	public abstract class JobSchedulerBase : IJobScheduler
+	protected JobSchedulerBase()
 	{
-		protected JobSchedulerBase()
+	}
+	~JobSchedulerBase()
+	{
+		Dispose(false);
+	}
+	public void Dispose()
+	{
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
+	protected virtual void Dispose(Boolean disposing)
+	{
+		IsDisposed = true;
+	}
+	public Boolean IsDisposed
+	{
+		get; private set;
+	}
+
+	// the default IJobScheduler instance
+	public static IJobScheduler Default
+	{
+		get
 		{
+			return JobScheduler.Default;
 		}
-		~JobSchedulerBase()
+	}
+
+	[ThreadStatic]
+	private static IJobScheduler? _current;
+	// the current instance of IJobScheduler to be used for Jobs execution
+	public static IJobScheduler Current
+	{
+		get
 		{
-			Dispose(false);
+			return _current ?? Default;
 		}
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
-		protected virtual void Dispose(Boolean disposing)
-		{
-			IsDisposed = true;
-		}
-		public Boolean IsDisposed
-		{
-			get; private set;
-		}
+	}
+	// Enter the scope of current Job Scheduler (Current = this)
+	public JobSchedulerRuntimeScope EnterScope()
+	{
+		JobSchedulerRuntimeScope scope = new(this, _current);
+		_current = scope.Current;
 
-		public static IJobScheduler Default
-		{
-			get
-			{
-				return JobScheduler.Default;
-			}
-		}
-		[ThreadStatic]
-		private static IJobScheduler? _current;
-		public static IJobScheduler? Current
-		{
-			get
-			{
-				return _current;
-			}
-		}
+		return scope;
+	}
+	// Leave the scope of current Job Scheduler (Current = [previous])
+	public void LeaveScope(in JobSchedulerRuntimeScope scope)
+	{
+		if (scope.Current != this)
+			throw new ArgumentException("Inconsistent job scheduler", nameof(scope));
 
-		public abstract void Enqueue(Job job);
-		public abstract Boolean Cancel(Job job);
-		public abstract Int32 PendingJobsCount { get; }
+		_current = scope.Previous;
+	}
 
-		// this method must be used when executing jobs in a scheduler
-		// in sets the IJobScheduler.Current property to this during the job execution
-		protected JobStatus ExecuteJobProcedure(Job job)
-		{
-			if (job == null)
-				throw new ArgumentNullException(nameof(job));
+	public abstract void Enqueue(Job job);
+	public abstract Boolean Cancel(Job job);
+	public abstract Int32 PendingJobsCount { get; }
 
-			JobStatus result;
-			IJobScheduler? prevScheduler = _current;
+	// this method must be used when executing jobs in a scheduler
+	// in sets the IJobScheduler.Current property to this during the job execution
+	protected JobStatus ExecuteJobProcedure(Job job)
+	{
+		using var scope = EnterScope();
 
-			try
-			{
-				// set the current job executing scheduler
-				_current = this;
+		// execute main procedure of the job
+		return job.ExecuteProcedure();
+	}
+	// this method must be used when executing jobs in a scheduler
+	// in sets the IJobScheduler.Current property to this during the job execution
+	protected Int32 ExecuteJobContinuations(Job job)
+	{
+		using var scope = EnterScope();
 
-				// execute main procedure of the job
-				result = job.ExecuteProcedure();
-			}
-			finally
-			{
-				// reset job scheduler
-				_current = prevScheduler;
-			}
-
-			return result;
-		}
-		// this method must be used when executing jobs in a scheduler
-		// in sets the IJobScheduler.Current property to this during the job execution
-		protected Int32 ExecuteJobContinuations(Job job)
-		{
-			if (job == null)
-				throw new ArgumentNullException(nameof(job));
-
-			Int32 result;
-			IJobScheduler? prevScheduler = _current;
-
-			try
-			{
-				// set the current job executing scheduler
-				_current = this;
-
-				// execute continuations of the job
-				result = job.ExecuteContinuations();
-			}
-			finally
-			{
-				// reset job scheduler
-				_current = prevScheduler;
-			}
-
-			return result;
-		}
+		// execute continuations of the job
+		return job.ExecuteContinuations();
 	}
 }

@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+
+		<Company>Armat</Company>
+		<Product>Armat Threading</Product>
+		<Authors>Ara Petrosyan</Authors>
+
+		<RootNamespace>Armat.Threading</RootNamespace>
+		<AssemblyName>armat.threading.test</AssemblyName>
+
+		<Version>1.0.0</Version>
+		<AssemblyVersion>$(Version).0</AssemblyVersion>
+		<FileVersion>$(Version).0</FileVersion>
+
+		<OutputType>Library</OutputType>
+		<_DotNetVersion>net6.0</_DotNetVersion>
+		<TargetFramework>$(_DotNetVersion)</TargetFramework>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+		<_BinDir>$(SolutionDir)\..\..\bin\$(Configuration)</_BinDir>
+		<OutputPath>$(_BinDir)\</OutputPath>
+		<IntermediateOutputPath>$(OutputPath)\obj\$(MSBuildProjectName)\</IntermediateOutputPath>
+
+		<ImplicitUsings>disable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="coverlet.collector" Version="3.2.0" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
+		<PackageReference Include="xunit" Version="2.4.2" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Threading\Threading.csproj" />
+	</ItemGroup>
+
+	<!-- Remove redundant translation directories from bin -->
+	<!-- See https://stackoverflow.com/questions/31289043/unwanted-culture-specific-dlls-copied-to-bin-directory/34362524#34362524 -->
+	<ItemGroup>
+		<FluentValidationExcludedCultures Include="cs;de;es;fr;it;ja;ko;pl;pt-BR;ru;ru;tr;zh-Hans;zh-Hant">
+			<InProject>false</InProject>
+		</FluentValidationExcludedCultures>
+	</ItemGroup>
+	<Target Name="RemoveTranslationsAfterBuild" AfterTargets="AfterBuild">
+		<RemoveDir Directories="@(FluentValidationExcludedCultures->'$(OutputPath)%(Filename)')" />
+	</Target>
+	<Target Name="RemoveTranslationsAfterPackage" AfterTargets="AfterPackage">
+		<RemoveDir Directories="@(FluentValidationExcludedCultures->'$(_PackageTempDir)\$(OutputPath)%(Filename)')" />
+	</Target>
+
+</Project>
