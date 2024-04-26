@@ -33,7 +33,6 @@ public struct WorkerRunOptions
 	public Boolean? ConfigureAwait { get; set; }
 }
 
-[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "<Pending>")]
 public static class Executor
 {
 	public const Int32 TaskCompletionDelayMS = 0_500;
@@ -93,33 +92,33 @@ public static class Executor
 
 		return GetLogOutputPrefix(methodName);
 	}
-	public static String[] RemoveLogOutoutPrefix(String[] arrLogLones)
+	public static String[] RemoveLogOutputPrefix(String[] arrLogLines)
 	{
-		if (arrLogLones == null || arrLogLones.Length == 0)
-			return arrLogLones;
+		if (arrLogLines.Length == 0)
+			return arrLogLines;
 
 		const String separatorPattern = ")| ";
-		for (Int32 index = 0; index < arrLogLones.Length; index++)
+		for (Int32 index = 0; index < arrLogLines.Length; index++)
 		{
-			String row = arrLogLones[index];
+			String row = arrLogLines[index];
 			Int32 separatorPos = row.IndexOf(separatorPattern, StringComparison.InvariantCulture);
 
 			if (separatorPos != -1)
-				arrLogLones[index] = row[(separatorPos + separatorPattern.Length)..];
+				arrLogLines[index] = row[(separatorPos + separatorPattern.Length)..];
 		}
 
-		return arrLogLones;
+		return arrLogLines;
 	}
 
 	public static void TriggerAwaitRunner(String methodName, WorkerType resultType, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output)
 	{
 		using ManualResetEvent mre = new(false);
-		String outputPrefix = GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod().Name, listWorkerOptions);
-		if (output != null)
-			output.WriteLine(outputPrefix + "Thread Starting");
 
-		// run the test in a separate thread to get rid of Task-s
-		// call stack and infrastructure used in the XUnit framework
+		String outputPrefix = GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name, listWorkerOptions);
+		output.WriteLine(outputPrefix + "Thread Starting");
+
+		// run the test in a separate thread to get rid of Task-s call stack
+		// and infrastructure used in the XUnit framework
 		Thread testThread = new(TriggerAwaitRunner_ThreadProc);
 		testThread.Name = "TestThreadProc";
 		testThread.Start(new Tuple<String, WorkerType, IEnumerable<WorkerRunOptions>, ITestOutputHelper, ManualResetEvent>(methodName, resultType, listWorkerOptions, output, mre));
@@ -127,17 +126,19 @@ public static class Executor
 		// wait until the thread starts
 		SleepAndReturnVoid(TaskCompletionDelayMS)();
 
-		if (output != null)
-			output.WriteLine(outputPrefix + "Thread Waiting");
+		output.WriteLine(outputPrefix + "Thread Waiting");
+
 		mre.WaitOne();
 		testThread.Join();
 
-		if (output != null)
-			output.WriteLine(outputPrefix + "Thread Stopped");
+		output.WriteLine(outputPrefix + "Thread Stopped");
 	}
 
-	private static void TriggerAwaitRunner_ThreadProc(Object arg)
+	private static void TriggerAwaitRunner_ThreadProc(Object? arg)
 	{
+		if (arg == null)
+			throw new ArgumentNullException(nameof(arg));
+
 		var arguments = (Tuple<String, WorkerType, IEnumerable<WorkerRunOptions>, ITestOutputHelper, ManualResetEvent>)arg;
 		String methodName = arguments.Item1;
 		WorkerType resultType = arguments.Item2;
@@ -148,125 +149,115 @@ public static class Executor
 		TriggerAwaitRunner_ThreadProc(methodName, resultType, listWorkerOptions, output, mre);
 	}
 
-	public static async void TriggerAwaitRunner_ThreadProc(String methodName, WorkerType resultType, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent mre)
+	public static async void TriggerAwaitRunner_ThreadProc(String methodName, WorkerType resultType, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
 		SynchronizationContext context = new();
 		SynchronizationContext.SetSynchronizationContext(context);
 
 		String jobResult = "None";
+		String outputPrefix;
 
 		switch (resultType)
 		{
 			case WorkerType.Void:
+
 				VoidAwaiterRunner(methodName, listWorkerOptions, output, mre);
 
 				jobResult = "Void";
 
-				if (output != null)
-				{
-					String outputPrefix = GetLogOutputPrefix(methodName);
-					output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
-				}
+				outputPrefix = GetLogOutputPrefix(methodName);
+				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
 				// there's no other way to wait for void returning async function
-				if (mre != null)
-					mre.WaitOne();
+				mre?.WaitOne();
+
 				break;
 			case WorkerType.Job:
+
+#pragma warning disable CS0618 // Type or member is obsolete
 				await JobAwaiterRunner(methodName, listWorkerOptions, output, null);
+#pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = "Runnable";
 
-				if (output != null)
-				{
-					String outputPrefix = GetLogOutputPrefix(methodName);
-					output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
-				}
+				outputPrefix = GetLogOutputPrefix(methodName);
+				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
-				if (mre != null)
-					mre.Set();
+				mre?.Set();
+
 				break;
 			case WorkerType.JobT:
+
+#pragma warning disable CS0618 // Type or member is obsolete
 				jobResult = await JobTAwaiterRunner(methodName, listWorkerOptions, output, null);
+#pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = String.Format(System.Globalization.CultureInfo.InvariantCulture, "Runnable<{0}>", jobResult);
 
-				if (output != null)
-				{
-					String outputPrefix = GetLogOutputPrefix(methodName);
-					output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
-				}
+				outputPrefix = GetLogOutputPrefix(methodName);
+				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
-				if (mre != null)
-					mre.Set();
+				mre?.Set();
+
 				break;
 			case WorkerType.Task:
+
+#pragma warning disable CS0618 // Type or member is obsolete
 				await TaskAwaiterRunner(methodName, listWorkerOptions, output, null);
+#pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = "Runnable";
 
-				if (output != null)
-				{
-					String outputPrefix = GetLogOutputPrefix(methodName);
-					output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
-				}
+				outputPrefix = GetLogOutputPrefix(methodName);
+				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
-				if (mre != null)
-					mre.Set();
+				mre?.Set();
+
 				break;
 			case WorkerType.TaskT:
+
+#pragma warning disable CS0618 // Type or member is obsolete
 				jobResult = await TaskTAwaiterRunner(methodName, listWorkerOptions, output, null);
+#pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = String.Format(System.Globalization.CultureInfo.InvariantCulture, "Runnable<{0}>", jobResult);
 
-				if (output != null)
-				{
-					String outputPrefix = GetLogOutputPrefix(methodName);
-					output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
-				}
+				outputPrefix = GetLogOutputPrefix(methodName);
+				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
-				if (mre != null)
-					mre.Set();
+				mre?.Set();
+
 				break;
 			default:
-				if (output != null)
-				{
-					String outputPrefix = GetLogOutputPrefix(methodName);
-					output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
-				}
+
+				outputPrefix = GetLogOutputPrefix(methodName);
+				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
+
 				break;
 		}
 	}
 
-	public static async void VoidAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent mre)
+	public static async void VoidAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		if (listWorkerOptions == null)
-		{
-			System.Diagnostics.Debug.Assert(false);
-			return;
-		}
-
 		String outputPrefix = GetLogOutputPrefix(methodName);
 		String jobResult = "Initial Value";
 
-		ExecutionContext execContextPrev = null;
-		SynchronizationContext syncContextPrev = null;
+		ExecutionContext? execContextPrev = null;
+		SynchronizationContext? syncContextPrev = null;
 		Int32 iterationIndex = 0;
 
 		try
 		{
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test started ----");
+			output.WriteLine(outputPrefix + "---- Test started ----");
 
 			foreach (WorkerRunOptions runOptions in listWorkerOptions)
 			{
 				String stage = "Worker Await " + (++iterationIndex).ToString(System.Globalization.CultureInfo.InvariantCulture);
 				String stagePrefix = outputPrefix + "Stage = " + stage + " ";
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "Begin " + stage);
+				output.WriteLine(outputPrefix + "Begin " + stage);
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
 					execContextPrev = ExecutionContext.Capture();
 					syncContextPrev = SynchronizationContext.Current;
@@ -286,9 +277,15 @@ public static class Executor
 						{
 							Job worker = Job.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -296,18 +293,30 @@ public static class Executor
 						{
 							Job<String> worker = Job<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 					case WorkerType.Task:
 						{
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -315,17 +324,23 @@ public static class Executor
 						{
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 				}
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
-					ExecutionContext execContextNew = ExecutionContext.Capture();
-					SynchronizationContext syncContextNew = SynchronizationContext.Current;
+					ExecutionContext? execContextNew = ExecutionContext.Capture();
+					SynchronizationContext? syncContextNew = SynchronizationContext.Current;
 
 					output.WriteLine(stagePrefix + (execContextNew == null ? "ExecutionContext is NULL" : "ExecutionContext is NOT NULL"));
 					output.WriteLine(stagePrefix + (syncContextNew == null ? "SynchronizationContext is NULL" : "SynchronizationContext is NOT NULL"));
@@ -334,53 +349,41 @@ public static class Executor
 					output.WriteLine(stagePrefix + (syncContextPrev == syncContextNew ? "SynchronizationContext DID NOT change" : "SynchronizationContext DID change"));
 				}
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
+				output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
 			}
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test completed ----");
+			output.WriteLine(outputPrefix + "---- Test completed ----");
 		}
 		catch (Exception exc)
 		{
 			//jobResult = "Failure Value";
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
+			output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
 		}
 
-		if (mre != null)
-			mre.Set();
+		mre?.Set();
 	}
-	public static async Job JobAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent mre)
+	public static async Job JobAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		if (listWorkerOptions == null)
-		{
-			System.Diagnostics.Debug.Assert(false);
-			return;
-		}
-
 		String outputPrefix = GetLogOutputPrefix(methodName);
 		String jobResult = "Initial Value";
 
-		ExecutionContext execContextPrev = null;
-		SynchronizationContext syncContextPrev = null;
+		ExecutionContext? execContextPrev = null;
+		SynchronizationContext? syncContextPrev = null;
 		Int32 iterationIndex = 0;
 
 		try
 		{
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test started ----");
+			output.WriteLine(outputPrefix + "---- Test started ----");
 
 			foreach (WorkerRunOptions runOptions in listWorkerOptions)
 			{
 				String stage = "Worker Await " + (++iterationIndex).ToString(System.Globalization.CultureInfo.InvariantCulture);
 				String stagePrefix = outputPrefix + "Stage = " + stage + " ";
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "Begin " + stage);
+				output.WriteLine(outputPrefix + "Begin " + stage);
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
 					execContextPrev = ExecutionContext.Capture();
 					syncContextPrev = SynchronizationContext.Current;
@@ -400,9 +403,15 @@ public static class Executor
 						{
 							Job worker = Job.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -410,18 +419,30 @@ public static class Executor
 						{
 							Job<String> worker = Job<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 					case WorkerType.Task:
 						{
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -429,17 +450,23 @@ public static class Executor
 						{
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 				}
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
-					ExecutionContext execContextNew = ExecutionContext.Capture();
-					SynchronizationContext syncContextNew = SynchronizationContext.Current;
+					ExecutionContext? execContextNew = ExecutionContext.Capture();
+					SynchronizationContext? syncContextNew = SynchronizationContext.Current;
 
 					output.WriteLine(stagePrefix + (execContextNew == null ? "ExecutionContext is NULL" : "ExecutionContext is NOT NULL"));
 					output.WriteLine(stagePrefix + (syncContextNew == null ? "SynchronizationContext is NULL" : "SynchronizationContext is NOT NULL"));
@@ -448,53 +475,41 @@ public static class Executor
 					output.WriteLine(stagePrefix + (syncContextPrev == syncContextNew ? "SynchronizationContext DID NOT change" : "SynchronizationContext DID change"));
 				}
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
+				output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
 			}
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test completed ----");
+			output.WriteLine(outputPrefix + "---- Test completed ----");
 		}
 		catch (Exception exc)
 		{
 			//jobResult = "Failure Value";
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
+			output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
 		}
 
-		if (mre != null)
-			mre.Set();
+		mre?.Set();
 	}
-	public static async Job<String> JobTAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent mre)
+	public static async Job<String> JobTAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		if (listWorkerOptions == null)
-		{
-			System.Diagnostics.Debug.Assert(false);
-			return "No workers to run";
-		}
-
 		String outputPrefix = GetLogOutputPrefix(methodName);
 		String jobResult = "Initial Value";
 
-		ExecutionContext execContextPrev = null;
-		SynchronizationContext syncContextPrev = null;
+		ExecutionContext? execContextPrev = null;
+		SynchronizationContext? syncContextPrev = null;
 		Int32 iterationIndex = 0;
 
 		try
 		{
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test started ----");
+			output.WriteLine(outputPrefix + "---- Test started ----");
 
 			foreach (WorkerRunOptions runOptions in listWorkerOptions)
 			{
 				String stage = "Worker Await " + (++iterationIndex).ToString(System.Globalization.CultureInfo.InvariantCulture);
 				String stagePrefix = outputPrefix + "Stage = " + stage + " ";
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "Begin " + stage);
+				output.WriteLine(outputPrefix + "Begin " + stage);
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
 					execContextPrev = ExecutionContext.Capture();
 					syncContextPrev = SynchronizationContext.Current;
@@ -514,9 +529,15 @@ public static class Executor
 						{
 							Job worker = Job.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -524,18 +545,30 @@ public static class Executor
 						{
 							Job<String> worker = Job<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 					case WorkerType.Task:
 						{
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -543,17 +576,23 @@ public static class Executor
 						{
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 				}
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
-					ExecutionContext execContextNew = ExecutionContext.Capture();
-					SynchronizationContext syncContextNew = SynchronizationContext.Current;
+					ExecutionContext? execContextNew = ExecutionContext.Capture();
+					SynchronizationContext? syncContextNew = SynchronizationContext.Current;
 
 					output.WriteLine(stagePrefix + (execContextNew == null ? "ExecutionContext is NULL" : "ExecutionContext is NOT NULL"));
 					output.WriteLine(stagePrefix + (syncContextNew == null ? "SynchronizationContext is NULL" : "SynchronizationContext is NOT NULL"));
@@ -562,55 +601,43 @@ public static class Executor
 					output.WriteLine(stagePrefix + (syncContextPrev == syncContextNew ? "SynchronizationContext DID NOT change" : "SynchronizationContext DID change"));
 				}
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
+				output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
 			}
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test completed ----");
+			output.WriteLine(outputPrefix + "---- Test completed ----");
 		}
 		catch (Exception exc)
 		{
 			jobResult = "Failure Value";
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
+			output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
 		}
 
-		if (mre != null)
-			mre.Set();
+		mre?.Set();
 
 		return jobResult;
 	}
-	public static async System.Threading.Tasks.Task TaskAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent mre)
+	public static async System.Threading.Tasks.Task TaskAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		if (listWorkerOptions == null)
-		{
-			System.Diagnostics.Debug.Assert(false);
-			return;
-		}
-
 		String outputPrefix = GetLogOutputPrefix(methodName);
 		String jobResult = "Initial Value";
 
-		ExecutionContext execContextPrev = null;
-		SynchronizationContext syncContextPrev = null;
+		ExecutionContext? execContextPrev = null;
+		SynchronizationContext? syncContextPrev = null;
 		Int32 iterationIndex = 0;
 
 		try
 		{
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test started ----");
+			output.WriteLine(outputPrefix + "---- Test started ----");
 
 			foreach (WorkerRunOptions runOptions in listWorkerOptions)
 			{
 				String stage = "Worker Await " + (++iterationIndex).ToString(System.Globalization.CultureInfo.InvariantCulture);
 				String stagePrefix = outputPrefix + "Stage = " + stage + " ";
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "Begin " + stage);
+				output.WriteLine(outputPrefix + "Begin " + stage);
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
 					execContextPrev = ExecutionContext.Capture();
 					syncContextPrev = SynchronizationContext.Current;
@@ -630,9 +657,15 @@ public static class Executor
 						{
 							Job worker = Job.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning disable CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -640,18 +673,30 @@ public static class Executor
 						{
 							Job<String> worker = Job<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning disable CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 					case WorkerType.Task:
 						{
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning disable CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -659,17 +704,23 @@ public static class Executor
 						{
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning disable CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 				}
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
-					ExecutionContext execContextNew = ExecutionContext.Capture();
-					SynchronizationContext syncContextNew = SynchronizationContext.Current;
+					ExecutionContext? execContextNew = ExecutionContext.Capture();
+					SynchronizationContext? syncContextNew = SynchronizationContext.Current;
 
 					output.WriteLine(stagePrefix + (execContextNew == null ? "ExecutionContext is NULL" : "ExecutionContext is NOT NULL"));
 					output.WriteLine(stagePrefix + (syncContextNew == null ? "SynchronizationContext is NULL" : "SynchronizationContext is NOT NULL"));
@@ -678,53 +729,41 @@ public static class Executor
 					output.WriteLine(stagePrefix + (syncContextPrev == syncContextNew ? "SynchronizationContext DID NOT change" : "SynchronizationContext DID change"));
 				}
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
+				output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
 			}
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test completed ----");
+			output.WriteLine(outputPrefix + "---- Test completed ----");
 		}
 		catch (Exception exc)
 		{
 			//jobResult = "Failure Value";
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
+			output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
 		}
 
-		if (mre != null)
-			mre.Set();
+		mre?.Set();
 	}
-	public static async System.Threading.Tasks.Task<String> TaskTAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent mre)
+	public static async System.Threading.Tasks.Task<String> TaskTAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		if (listWorkerOptions == null)
-		{
-			System.Diagnostics.Debug.Assert(false);
-			return "No workers to run";
-		}
-
 		String outputPrefix = GetLogOutputPrefix(methodName);
 		String jobResult = "Initial Value";
 
-		ExecutionContext execContextPrev = null;
-		SynchronizationContext syncContextPrev = null;
+		ExecutionContext? execContextPrev = null;
+		SynchronizationContext? syncContextPrev = null;
 		Int32 iterationIndex = 0;
 
 		try
 		{
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test started ----");
+			output.WriteLine(outputPrefix + "---- Test started ----");
 
 			foreach (WorkerRunOptions runOptions in listWorkerOptions)
 			{
 				String stage = "Worker Await " + (++iterationIndex).ToString(System.Globalization.CultureInfo.InvariantCulture);
 				String stagePrefix = outputPrefix + "Stage = " + stage + " ";
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "Begin " + stage);
+				output.WriteLine(outputPrefix + "Begin " + stage);
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
 					execContextPrev = ExecutionContext.Capture();
 					syncContextPrev = SynchronizationContext.Current;
@@ -744,9 +783,15 @@ public static class Executor
 						{
 							Job worker = Job.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -754,18 +799,30 @@ public static class Executor
 						{
 							Job<String> worker = Job<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 					case WorkerType.Task:
 						{
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 							jobResult = stage;
 						}
 						break;
@@ -773,17 +830,23 @@ public static class Executor
 						{
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
+							{
+#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
+#pragma warning restore CS0618 // Type or member is obsolete
+							}
 							else
+							{
 								jobResult = await worker.ConfigureAwait(runOptions.ConfigureAwait.Value);
+							}
 						}
 						break;
 				}
 
-				if (output != null && runOptions.ConfigureAwait.HasValue)
+				if (runOptions.ConfigureAwait.HasValue)
 				{
-					ExecutionContext execContextNew = ExecutionContext.Capture();
-					SynchronizationContext syncContextNew = SynchronizationContext.Current;
+					ExecutionContext? execContextNew = ExecutionContext.Capture();
+					SynchronizationContext? syncContextNew = SynchronizationContext.Current;
 
 					output.WriteLine(stagePrefix + (execContextNew == null ? "ExecutionContext is NULL" : "ExecutionContext is NOT NULL"));
 					output.WriteLine(stagePrefix + (syncContextNew == null ? "SynchronizationContext is NULL" : "SynchronizationContext is NOT NULL"));
@@ -792,23 +855,19 @@ public static class Executor
 					output.WriteLine(stagePrefix + (syncContextPrev == syncContextNew ? "SynchronizationContext DID NOT change" : "SynchronizationContext DID change"));
 				}
 
-				if (output != null)
-					output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
+				output.WriteLine(outputPrefix + "End " + stage + " with result = " + jobResult);
 			}
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test completed ----");
+			output.WriteLine(outputPrefix + "---- Test completed ----");
 		}
 		catch (Exception exc)
 		{
 			jobResult = "Failure Value";
 
-			if (output != null)
-				output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
+			output.WriteLine(outputPrefix + "---- Test failed with error: " + exc.Message + " ----");
 		}
 
-		if (mre != null)
-			mre.Set();
+		mre?.Set();
 
 		return jobResult;
 	}

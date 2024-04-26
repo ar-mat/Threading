@@ -53,42 +53,42 @@ public class JobSchedulerUnitTest_AsyncAwait
 		Output.Reset();
 		RunJSL_011_AwaitJob_Void();
 		result = Output.GetLines();
-		result_AwaitJob_Void = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJob_Void = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTask_Void
 		Output.Reset();
 		RunJSL_014_AwaitTask_Void();
 		result = Output.GetLines();
-		result_AwaitTask_Void = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTask_Void = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJob_Job
 		Output.Reset();
 		RunJSL_012_AwaitJob_Job();
 		result = Output.GetLines();
-		result_AwaitJob_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJob_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTask_Job
 		Output.Reset();
 		RunJSL_015_AwaitTask_Job();
 		result = Output.GetLines();
-		result_AwaitTask_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTask_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJob_Task
 		Output.Reset();
 		RunJSL_013_AwaitJob_Task();
 		result = Output.GetLines();
-		result_AwaitJob_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJob_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTask_Task
 		Output.Reset();
 		RunJSL_016_AwaitTask_Task();
 		result = Output.GetLines();
-		result_AwaitTask_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTask_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeededVoids =
@@ -172,42 +172,42 @@ public class JobSchedulerUnitTest_AsyncAwait
 		Output.Reset();
 		RunJSL_021_AwaitJobT_Void();
 		result = Output.GetLines();
-		result_AwaitJobT_Void = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobT_Void = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskT_Void
 		Output.Reset();
 		RunJSL_022_AwaitTaskT_Void();
 		result = Output.GetLines();
-		result_AwaitTaskT_Void = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskT_Void = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobT_JobT
 		Output.Reset();
 		RunJSL_023_AwaitJobT_JobT();
 		result = Output.GetLines();
-		result_AwaitJobT_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobT_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskT_JobT
 		Output.Reset();
 		RunJSL_024_AwaitTaskT_JobT();
 		result = Output.GetLines();
-		result_AwaitTaskT_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskT_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobT_TaskT
 		Output.Reset();
 		RunJSL_025_AwaitJobT_TaskT();
 		result = Output.GetLines();
-		result_AwaitJobT_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobT_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskT_TaskT
 		Output.Reset();
 		RunJSL_026_AwaitTaskT_TaskT();
 		result = Output.GetLines();
-		result_AwaitTaskT_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskT_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeededVoids =
@@ -290,56 +290,56 @@ public class JobSchedulerUnitTest_AsyncAwait
 		Output.Reset();
 		RunJSL_031_AwaitJobJob_Job();
 		result = Output.GetLines();
-		result_AwaitJobJob_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobJob_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobTask_Task
 		Output.Reset();
 		RunJSL_032_AwaitJobTask_Job();
 		result = Output.GetLines();
-		result_AwaitJobTask_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobTask_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskJob_Job
 		Output.Reset();
 		RunJSL_033_AwaitTaskJob_Job();
 		result = Output.GetLines();
-		result_AwaitTaskJob_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskJob_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskTask_Task
 		Output.Reset();
 		RunJSL_034_AwaitTaskTask_Job();
 		result = Output.GetLines();
-		result_AwaitTaskTask_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTask_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobJob_Task
 		Output.Reset();
 		RunJSL_035_AwaitJobJob_Task();
 		result = Output.GetLines();
-		result_AwaitJobJob_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobJob_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobTask_Task
 		Output.Reset();
 		RunJSL_036_AwaitJobTask_Task();
 		result = Output.GetLines();
-		result_AwaitJobTask_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobTask_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskJob_Task
 		Output.Reset();
 		RunJSL_037_AwaitTaskJob_Task();
 		result = Output.GetLines();
-		result_AwaitTaskJob_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskJob_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskTask_Task
 		Output.Reset();
 		RunJSL_038_AwaitTaskTask_Task();
 		result = Output.GetLines();
-		result_AwaitTaskTask_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTask_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeeded =
@@ -437,56 +437,56 @@ public class JobSchedulerUnitTest_AsyncAwait
 		Output.Reset();
 		RunJSL_041_AwaitJobTJobT_JobT();
 		result = Output.GetLines();
-		result_AwaitJobTJobT_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobTJobT_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobT_TaskT
 		Output.Reset();
 		RunJSL_042_AwaitJobTTaskT_JobT();
 		result = Output.GetLines();
-		result_AwaitJobTTaskT_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobTTaskT_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskT_JobT
 		Output.Reset();
 		RunJSL_043_AwaitTaskTJobT_JobT();
 		result = Output.GetLines();
-		result_AwaitTaskTJobT_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTJobT_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskT_TaskT
 		Output.Reset();
 		RunJSL_044_AwaitTaskTTaskT_JobT();
 		result = Output.GetLines();
-		result_AwaitTaskTTaskT_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTTaskT_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobT_TaskT
 		Output.Reset();
 		RunJSL_045_AwaitJobTJobT_TaskT();
 		result = Output.GetLines();
-		result_AwaitJobTJobT_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobTJobT_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobT_TaskT
 		Output.Reset();
 		RunJSL_046_AwaitJobTTaskT_TaskT();
 		result = Output.GetLines();
-		result_AwaitJobTTaskT_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobTTaskT_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskT_TaskT
 		Output.Reset();
 		RunJSL_047_AwaitTaskTJobT_TaskT();
 		result = Output.GetLines();
-		result_AwaitTaskTJobT_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTJobT_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskT_TaskT
 		Output.Reset();
 		RunJSL_048_AwaitTaskTTaskT_TaskT();
 		result = Output.GetLines();
-		result_AwaitTaskTTaskT_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTTaskT_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeeded =
@@ -583,14 +583,14 @@ public class JobSchedulerUnitTest_AsyncAwait
 		Output.Reset();
 		RunJSL_051_AwaitJobJobTTaskTaskT_Void();
 		result = Output.GetLines();
-		result_AwaitJob_Void = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJob_Void = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskTaskTJobJobT_Void
 		Output.Reset();
 		RunJSL_052_AwaitTaskTaskTJobJobT_Void();
 		result = Output.GetLines();
-		result_AwaitTask_Void = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTask_Void = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeeded =
@@ -634,28 +634,28 @@ public class JobSchedulerUnitTest_AsyncAwait
 		Output.Reset();
 		RunJSL_061_AwaitJobJobTTaskTaskT_Job();
 		result = Output.GetLines();
-		result_AwaitJobJobTTaskTaskT_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobJobTTaskTaskT_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobJobTTaskTaskT_Task
 		Output.Reset();
 		RunJSL_062_AwaitJobJobTTaskTaskT_Task();
 		result = Output.GetLines();
-		result_AwaitJobJobTTaskTaskT_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobJobTTaskTaskT_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskTaskTJobJobT_Job
 		Output.Reset();
 		RunJSL_063_AwaitTaskTaskTJobJobT_Job();
 		result = Output.GetLines();
-		result_AwaitTaskTaskTJobJobT_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTaskTJobJobT_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskTaskTJobJobT_Task
 		Output.Reset();
 		RunJSL_064_AwaitTaskTaskTJobJobT_Task();
 		result = Output.GetLines();
-		result_AwaitTaskTaskTJobJobT_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTaskTJobJobT_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeeded =
@@ -717,28 +717,28 @@ public class JobSchedulerUnitTest_AsyncAwait
 		Output.Reset();
 		RunJSL_071_AwaitJobJobTTaskTaskT_JobT();
 		result = Output.GetLines();
-		result_AwaitJobJobTTaskTaskT_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobJobTTaskTaskT_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJobJobTTaskTaskT_TaskT
 		Output.Reset();
 		RunJSL_072_AwaitJobJobTTaskTaskT_TaskT();
 		result = Output.GetLines();
-		result_AwaitJobJobTTaskTaskT_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitJobJobTTaskTaskT_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskTaskTJobJobT_JobT
 		Output.Reset();
 		RunJSL_073_AwaitTaskTaskTJobJobT_JobT();
 		result = Output.GetLines();
-		result_AwaitTaskTaskTJobJobT_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTaskTJobJobT_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTaskTaskTJobJobT_TaskT
 		Output.Reset();
 		RunJSL_074_AwaitTaskTaskTJobJobT_TaskT();
 		result = Output.GetLines();
-		result_AwaitTaskTaskTJobJobT_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaitTaskTaskTJobJobT_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeeded =

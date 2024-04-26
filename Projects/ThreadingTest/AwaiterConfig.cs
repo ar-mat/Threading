@@ -52,28 +52,28 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerType[] { WorkerType.Job });
 		result = Output.GetLines();
-		result_AwaiterConfig_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_JobT
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerType[] { WorkerType.JobT });
 		result = Output.GetLines();
-		result_AwaiterConfig_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_Task
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerType[] { WorkerType.Task });
 		result = Output.GetLines();
-		result_AwaiterConfig_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_TaskT
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerType[] { WorkerType.TaskT });
 		result = Output.GetLines();
-		result_AwaiterConfig_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeeded =
@@ -99,28 +99,28 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Job, true) });
 		result = Output.GetLines();
-		result_AwaiterConfig_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_JobT
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.JobT, true) });
 		result = Output.GetLines();
-		result_AwaiterConfig_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_Task
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Task, true) });
 		result = Output.GetLines();
-		result_AwaiterConfig_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_TaskT
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.TaskT, true) });
 		result = Output.GetLines();
-		result_AwaiterConfig_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeeded =
@@ -146,28 +146,28 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Job, false) });
 		result = Output.GetLines();
-		result_AwaiterConfig_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_JobT
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.JobT, false) });
 		result = Output.GetLines();
-		result_AwaiterConfig_JobT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_Task
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Task, false) });
 		result = Output.GetLines();
-		result_AwaiterConfig_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_TaskT
 		Output.Reset();
 		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.TaskT, false) });
 		result = Output.GetLines();
-		result_AwaiterConfig_TaskT = Executor.RemoveLogOutoutPrefix(result);
+		result_AwaiterConfig_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeeded =
@@ -197,14 +197,14 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Output.Reset();
 		RunJSL_021_VerifyThreadLocals_Job();
 		result = Output.GetLines();
-		result_VerifyThreadLocals_Job = Executor.RemoveLogOutoutPrefix(result);
+		result_VerifyThreadLocals_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// VerifyThreadLocals_Task
 		Output.Reset();
 		RunJSL_022_VerifyThreadLocals_Task();
 		result = Output.GetLines();
-		result_VerifyThreadLocals_Task = Executor.RemoveLogOutoutPrefix(result);
+		result_VerifyThreadLocals_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		succeeded = result_VerifyThreadLocals_Job.ContentsEquals(result_VerifyThreadLocals_Task);
