@@ -9,7 +9,6 @@ using Xunit.Abstractions;
 
 namespace Armat.Threading;
 
-[TestCaseOrderer("Armat.Test.PriorityOrderer", "ArmatUtilsTest")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "<Pending>")]
 public class JobSchedulerUnitTest_AsyncAwait
 {
@@ -22,14 +21,14 @@ public class JobSchedulerUnitTest_AsyncAwait
 
 	private OutputInterceptor Output { get; set; }
 
-	private void RunJSL_AsyncAwait(String methodName, WorkerType returnType, IEnumerable<WorkerType> listWorkerTypes)
+	private void RunJSL_AsyncAwait(String callerName, WorkerType returnType, IEnumerable<WorkerType> listWorkerTypes)
 	{
-		RunJSL_AsyncAwait(methodName, returnType, listWorkerTypes.Select(workerType => new WorkerRunOptions(workerType)));
+		RunJSL_AsyncAwait(callerName, returnType, listWorkerTypes.Select(workerType => new WorkerRunOptions(workerType)));
 	}
 
-	private void RunJSL_AsyncAwait(String methodName, WorkerType returnType, IEnumerable<WorkerRunOptions> listWorkerOptions)
+	private void RunJSL_AsyncAwait(String callerName, WorkerType returnType, IEnumerable<WorkerRunOptions> listWorkerOptions)
 	{
-		Executor.TriggerAwaitRunner(methodName, returnType, listWorkerOptions, Output);
+		Executor.TriggerAwaitRunner(callerName, returnType, listWorkerOptions, Output);
 	}
 
 	// Test case naming convention is RunJSL_<CategoryId>_Await<AwaiterClassTypes>_<AwaiterReturnType>
@@ -38,6 +37,9 @@ public class JobSchedulerUnitTest_AsyncAwait
 
 	#region 004-010 - Compare TPL vs JSL on Single Worker Execution (non-generic workers case)
 
+	// Runs a single asynchronous operation with all possible non-generic variations of 
+	// return value types (void, Job, Task) and asynchronous executor types (Job, Task)
+	// successful run implies that the results are matching in all described cases
 	[Fact]
 	public void RunJSL_010_Compare_TPL_vs_JSL_NonGeneric_SingleWorkerExecution()
 	{
@@ -58,28 +60,28 @@ public class JobSchedulerUnitTest_AsyncAwait
 
 		// AwaitTask_Void
 		Output.Reset();
-		RunJSL_014_AwaitTask_Void();
+		RunJSL_012_AwaitTask_Void();
 		result = Output.GetLines();
 		result_AwaitTask_Void = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJob_Job
 		Output.Reset();
-		RunJSL_012_AwaitJob_Job();
+		RunJSL_013_AwaitJob_Job();
 		result = Output.GetLines();
 		result_AwaitJob_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitTask_Job
 		Output.Reset();
-		RunJSL_015_AwaitTask_Job();
+		RunJSL_014_AwaitTask_Job();
 		result = Output.GetLines();
 		result_AwaitTask_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaitJob_Task
 		Output.Reset();
-		RunJSL_013_AwaitJob_Task();
+		RunJSL_015_AwaitJob_Task();
 		result = Output.GetLines();
 		result_AwaitJob_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
@@ -108,39 +110,39 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_011_AwaitJob_Void()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Void, new WorkerType[] { WorkerType.Job });
 	}
 
 	//[Fact]
-	private void RunJSL_014_AwaitTask_Void()
+	private void RunJSL_012_AwaitTask_Void()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Void, new WorkerType[] { WorkerType.Task });
 	}
 
 	//[Fact]
-	private void RunJSL_012_AwaitJob_Job()
+	private void RunJSL_013_AwaitJob_Job()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Task, new WorkerType[] { WorkerType.Job });
 	}
 
 	//[Fact]
-	private void RunJSL_015_AwaitTask_Job()
+	private void RunJSL_014_AwaitTask_Job()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Job, new WorkerType[] { WorkerType.Task });
 	}
 
 	//[Fact]
-	private void RunJSL_013_AwaitJob_Task()
+	private void RunJSL_015_AwaitJob_Task()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Task, new WorkerType[] { WorkerType.Job });
 	}
@@ -148,7 +150,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_016_AwaitTask_Task()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Task, new WorkerType[] { WorkerType.Task });
 	}
@@ -157,6 +159,9 @@ public class JobSchedulerUnitTest_AsyncAwait
 
 	#region 004-020 - Compare TPL vs JSL on Single Worker Execution (generic workers case)
 
+	// Runs a single asynchronous operation with all possible generic variations of 
+	// return value types (void, JobT, TaskT) and asynchronous executor types (JobT, TaskT)
+	// successful run implies that the results are matching in all described cases
 	[Fact]
 	public void RunJSL_020_Compare_TPL_vs_JSL_Generic_SingleWorkerExecution()
 	{
@@ -227,7 +232,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_021_AwaitJobT_Void()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Void, new WorkerType[] { WorkerType.JobT });
 	}
@@ -235,7 +240,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_022_AwaitTaskT_Void()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Void, new WorkerType[] { WorkerType.TaskT });
 	}
@@ -243,7 +248,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_023_AwaitJobT_JobT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.JobT, new WorkerType[] { WorkerType.JobT });
 	}
@@ -251,7 +256,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_024_AwaitTaskT_JobT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.JobT, new WorkerType[] { WorkerType.TaskT });
 	}
@@ -259,7 +264,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_025_AwaitJobT_TaskT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.TaskT, new WorkerType[] { WorkerType.JobT });
 	}
@@ -267,7 +272,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_026_AwaitTaskT_TaskT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.TaskT, new WorkerType[] { WorkerType.TaskT });
 	}
@@ -276,6 +281,9 @@ public class JobSchedulerUnitTest_AsyncAwait
 
 	#region 004-030 - Compare TPL vs JSL on Double Worker Execution (non-generic workers case)
 
+	// Runs a two sequential asynchronous operations with all possible non-generic variations of 
+	// return value types (void, Job, Task) and asynchronous executor types (Job, Task)
+	// successful run implies that the results are matching in all described cases
 	[Fact]
 	public void RunJSL_030_Compare_TPL_vs_JSL_NonGeneric_DoubleWorkerExecution()
 	{
@@ -358,7 +366,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_031_AwaitJobJob_Job()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Job, new WorkerType[] { WorkerType.Job, WorkerType.Job });
 	}
@@ -366,7 +374,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_032_AwaitJobTask_Job()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Job, new WorkerType[] { WorkerType.Job, WorkerType.Task });
 	}
@@ -374,7 +382,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_033_AwaitTaskJob_Job()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Job, new WorkerType[] { WorkerType.Task, WorkerType.Job });
 	}
@@ -382,7 +390,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_034_AwaitTaskTask_Job()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Job, new WorkerType[] { WorkerType.Task, WorkerType.Task });
 	}
@@ -390,7 +398,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_035_AwaitJobJob_Task()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Task, new WorkerType[] { WorkerType.Job, WorkerType.Job });
 	}
@@ -398,7 +406,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_036_AwaitJobTask_Task()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Task, new WorkerType[] { WorkerType.Job, WorkerType.Task });
 	}
@@ -406,7 +414,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_037_AwaitTaskJob_Task()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Task, new WorkerType[] { WorkerType.Task, WorkerType.Job });
 	}
@@ -414,7 +422,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_038_AwaitTaskTask_Task()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Task, new WorkerType[] { WorkerType.Task, WorkerType.Task });
 	}
@@ -423,6 +431,9 @@ public class JobSchedulerUnitTest_AsyncAwait
 
 	#region 004-040 - Compare TPL vs JSL on Double Worker Execution (generic workers case)
 
+	// Runs a two sequential asynchronous operations with all possible generic variations of 
+	// return value types (void, JobT, TaskT) and asynchronous executor types (JobT, TaskT)
+	// successful run implies that the results are matching in all described cases
 	[Fact]
 	public void RunJSL_040_Compare_TPL_vs_JSL_Generic_DoubleWorkerExecution()
 	{
@@ -505,7 +516,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_041_AwaitJobTJobT_JobT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.JobT, new WorkerType[] { WorkerType.JobT, WorkerType.JobT });
 	}
@@ -513,7 +524,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_042_AwaitJobTTaskT_JobT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.JobT, new WorkerType[] { WorkerType.JobT, WorkerType.TaskT });
 	}
@@ -521,7 +532,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_043_AwaitTaskTJobT_JobT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.JobT, new WorkerType[] { WorkerType.TaskT, WorkerType.JobT });
 	}
@@ -529,7 +540,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_044_AwaitTaskTTaskT_JobT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.JobT, new WorkerType[] { WorkerType.TaskT, WorkerType.TaskT });
 	}
@@ -537,7 +548,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_045_AwaitJobTJobT_TaskT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.TaskT, new WorkerType[] { WorkerType.JobT, WorkerType.JobT });
 	}
@@ -545,7 +556,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_046_AwaitJobTTaskT_TaskT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.TaskT, new WorkerType[] { WorkerType.JobT, WorkerType.TaskT });
 	}
@@ -553,7 +564,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_047_AwaitTaskTJobT_TaskT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.TaskT, new WorkerType[] { WorkerType.TaskT, WorkerType.JobT });
 	}
@@ -561,7 +572,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_048_AwaitTaskTTaskT_TaskT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.TaskT, new WorkerType[] { WorkerType.TaskT, WorkerType.TaskT });
 	}
@@ -570,6 +581,9 @@ public class JobSchedulerUnitTest_AsyncAwait
 
 	#region 004-050 - Compare TPL vs JSL on Multi Worker Execution (void workers case)
 
+	// Runs four sequential asynchronous operations returning void results
+	// It calls [Job, JobT, Task, TaskT] and [Task, TaskT, Job, JobT] sequentially using await keyword
+	// successful run implies that the results are matching in all described cases
 	[Fact]
 	public void RunJSL_050_Compare_TPL_vs_JSL_Void_MultiWorkerExecution()
 	{
@@ -604,7 +618,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_051_AwaitJobJobTTaskTaskT_Void()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Void, new WorkerType[] { WorkerType.Job, WorkerType.JobT, WorkerType.Task, WorkerType.TaskT });
 	}
@@ -612,15 +626,18 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_052_AwaitTaskTaskTJobJobT_Void()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Void, new WorkerType[] { WorkerType.Task, WorkerType.TaskT, WorkerType.Job, WorkerType.JobT });
 	}
 
 	#endregion // 004-050 - Compare TPL vs JSL on Multi Worker Execution (void workers case)
 
-	#region 004-060 - Compare TPL vs JSL on Multi Worker Execution (generic workers case)
+	#region 004-060 - Compare TPL vs JSL on Multi Worker Execution (non-generic workers case)
 
+	// Runs four sequential asynchronous operations returning non-generic (Job and Task) results
+	// It calls [Job, JobT, Task, TaskT] and [Task, TaskT, Job, JobT] sequentially using await keyword
+	// successful run implies that the results are matching in all described cases
 	[Fact]
 	public void RunJSL_060_Compare_TPL_vs_JSL_NonGeneric_MultiWorkerExecution()
 	{
@@ -671,7 +688,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_061_AwaitJobJobTTaskTaskT_Job()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Job, new WorkerType[] { WorkerType.Job, WorkerType.JobT, WorkerType.Task, WorkerType.TaskT });
 	}
@@ -679,7 +696,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_062_AwaitJobJobTTaskTaskT_Task()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Task, new WorkerType[] { WorkerType.Job, WorkerType.JobT, WorkerType.Task, WorkerType.TaskT });
 	}
@@ -687,7 +704,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_063_AwaitTaskTaskTJobJobT_Job()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Job, new WorkerType[] { WorkerType.Task, WorkerType.TaskT, WorkerType.Job, WorkerType.JobT });
 	}
@@ -695,15 +712,18 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_064_AwaitTaskTaskTJobJobT_Task()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.Task, new WorkerType[] { WorkerType.Task, WorkerType.TaskT, WorkerType.Job, WorkerType.JobT });
 	}
 
 	#endregion // 004-060 - Compare TPL vs JSL on Multi Worker Execution (generic workers case)
 
-	#region 004-070 - Compare TPL vs JSL on Multi Worker Execution (non-generic workers case)
+	#region 004-070 - Compare TPL vs JSL on Multi Worker Execution (generic workers case)
 
+	// Runs four sequential asynchronous operations returning generic (JobT and TaskT) results
+	// It calls [Job, JobT, Task, TaskT] and [Task, TaskT, Job, JobT] sequentially using await keyword
+	// successful run implies that the results are matching in all described cases
 	[Fact]
 	public void RunJSL_070_Compare_TPL_vs_JSL_Generic_MultiWorkerExecution()
 	{
@@ -754,7 +774,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_071_AwaitJobJobTTaskTaskT_JobT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.JobT, new WorkerType[] { WorkerType.Job, WorkerType.JobT, WorkerType.Task, WorkerType.TaskT });
 	}
@@ -762,7 +782,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_072_AwaitJobJobTTaskTaskT_TaskT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.TaskT, new WorkerType[] { WorkerType.Job, WorkerType.JobT, WorkerType.Task, WorkerType.TaskT });
 	}
@@ -770,7 +790,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_073_AwaitTaskTaskTJobJobT_JobT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.JobT, new WorkerType[] { WorkerType.Task, WorkerType.TaskT, WorkerType.Job, WorkerType.JobT });
 	}
@@ -778,7 +798,7 @@ public class JobSchedulerUnitTest_AsyncAwait
 	//[Fact]
 	private void RunJSL_074_AwaitTaskTaskTJobJobT_TaskT()
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
 
 		RunJSL_AsyncAwait(methodName, WorkerType.TaskT, new WorkerType[] { WorkerType.Task, WorkerType.TaskT, WorkerType.Job, WorkerType.JobT });
 	}

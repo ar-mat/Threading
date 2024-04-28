@@ -71,26 +71,26 @@ public static class Executor
 		};
 	}
 
-	public static String GetLogOutputPrefix(String methodName)
+	public static String GetLogOutputPrefix(String callerName)
 	{
-		return $"{DateTime.Now:s} - {methodName} ({Environment.CurrentManagedThreadId})| ";
+		return $"{DateTime.Now:s} - {callerName} ({Environment.CurrentManagedThreadId})| ";
 	}
-	public static String GetLogOutputPrefix(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions)
+	public static String GetLogOutputPrefix(String callerName, IEnumerable<WorkerRunOptions> listWorkerOptions)
 	{
 		if (listWorkerOptions != null)
 		{
 			foreach (WorkerRunOptions runOptions in listWorkerOptions)
 			{
-				methodName += "_" + runOptions.WorkerType.ToString();
+				callerName += "_" + runOptions.WorkerType.ToString();
 
 				if (!runOptions.ConfigureAwait.HasValue)
-					methodName += "_Default";
+					callerName += "_Default";
 				else
-					methodName += runOptions.ConfigureAwait.Value ? "_True" : "_False";
+					callerName += runOptions.ConfigureAwait.Value ? "_True" : "_False";
 			}
 		}
 
-		return GetLogOutputPrefix(methodName);
+		return GetLogOutputPrefix(callerName);
 	}
 	public static String[] RemoveLogOutputPrefix(String[] arrLogLines)
 	{
@@ -110,7 +110,12 @@ public static class Executor
 		return arrLogLines;
 	}
 
-	public static void TriggerAwaitRunner(String methodName, WorkerType resultType, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output)
+	// Triggers an asynchronous operation and waits for it to finish before returning from this function.
+	// callerName - name of the initiator method (to be logged in the output).
+	// resultType - return value type of the asynchronous method. Could be one of void, Task, TaskT, Job, JobT.
+	// listWorkerOptions - list of asynchronous worker run options to be called sequentially (uses await in between).
+	// output - logs the results into the given output stream. Test cases use that to analyze method behavior.
+	public static void TriggerAwaitRunner(String callerName, WorkerType resultType, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output)
 	{
 		using ManualResetEvent mre = new(false);
 
@@ -121,7 +126,7 @@ public static class Executor
 		// and infrastructure used in the XUnit framework
 		Thread testThread = new(TriggerAwaitRunner_ThreadProc);
 		testThread.Name = "TestThreadProc";
-		testThread.Start(new Tuple<String, WorkerType, IEnumerable<WorkerRunOptions>, ITestOutputHelper, ManualResetEvent>(methodName, resultType, listWorkerOptions, output, mre));
+		testThread.Start(new Tuple<String, WorkerType, IEnumerable<WorkerRunOptions>, ITestOutputHelper, ManualResetEvent>(callerName, resultType, listWorkerOptions, output, mre));
 
 		// wait until the thread starts
 		SleepAndReturnVoid(TaskCompletionDelayMS)();
@@ -140,16 +145,15 @@ public static class Executor
 			throw new ArgumentNullException(nameof(arg));
 
 		var arguments = (Tuple<String, WorkerType, IEnumerable<WorkerRunOptions>, ITestOutputHelper, ManualResetEvent>)arg;
-		String methodName = arguments.Item1;
+		String callerName = arguments.Item1;
 		WorkerType resultType = arguments.Item2;
 		IEnumerable<WorkerRunOptions> listWorkerOptions = arguments.Item3;
 		ITestOutputHelper output = arguments.Item4;
 		ManualResetEvent mre = arguments.Item5;
 
-		TriggerAwaitRunner_ThreadProc(methodName, resultType, listWorkerOptions, output, mre);
+		TriggerAwaitRunner_ThreadProc(callerName, resultType, listWorkerOptions, output, mre);
 	}
-
-	public static async void TriggerAwaitRunner_ThreadProc(String methodName, WorkerType resultType, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
+	private static async void TriggerAwaitRunner_ThreadProc(String callerName, WorkerType resultType, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
 		SynchronizationContext context = new();
 		SynchronizationContext.SetSynchronizationContext(context);
@@ -161,11 +165,11 @@ public static class Executor
 		{
 			case WorkerType.Void:
 
-				VoidAwaiterRunner(methodName, listWorkerOptions, output, mre);
+				VoidAwaiterRunner(callerName, listWorkerOptions, output, mre);
 
 				jobResult = "Void";
 
-				outputPrefix = GetLogOutputPrefix(methodName);
+				outputPrefix = GetLogOutputPrefix(callerName);
 				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
 				// there's no other way to wait for void returning async function
@@ -175,12 +179,12 @@ public static class Executor
 			case WorkerType.Job:
 
 #pragma warning disable CS0618 // Type or member is obsolete
-				await JobAwaiterRunner(methodName, listWorkerOptions, output, null);
+				await JobAwaiterRunner(callerName, listWorkerOptions, output, null);
 #pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = "Runnable";
 
-				outputPrefix = GetLogOutputPrefix(methodName);
+				outputPrefix = GetLogOutputPrefix(callerName);
 				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
 				mre?.Set();
@@ -189,12 +193,12 @@ public static class Executor
 			case WorkerType.JobT:
 
 #pragma warning disable CS0618 // Type or member is obsolete
-				jobResult = await JobTAwaiterRunner(methodName, listWorkerOptions, output, null);
+				jobResult = await JobTAwaiterRunner(callerName, listWorkerOptions, output, null);
 #pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = String.Format(System.Globalization.CultureInfo.InvariantCulture, "Runnable<{0}>", jobResult);
 
-				outputPrefix = GetLogOutputPrefix(methodName);
+				outputPrefix = GetLogOutputPrefix(callerName);
 				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
 				mre?.Set();
@@ -203,12 +207,12 @@ public static class Executor
 			case WorkerType.Task:
 
 #pragma warning disable CS0618 // Type or member is obsolete
-				await TaskAwaiterRunner(methodName, listWorkerOptions, output, null);
+				await TaskAwaiterRunner(callerName, listWorkerOptions, output, null);
 #pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = "Runnable";
 
-				outputPrefix = GetLogOutputPrefix(methodName);
+				outputPrefix = GetLogOutputPrefix(callerName);
 				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
 				mre?.Set();
@@ -217,12 +221,12 @@ public static class Executor
 			case WorkerType.TaskT:
 
 #pragma warning disable CS0618 // Type or member is obsolete
-				jobResult = await TaskTAwaiterRunner(methodName, listWorkerOptions, output, null);
+				jobResult = await TaskTAwaiterRunner(callerName, listWorkerOptions, output, null);
 #pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = String.Format(System.Globalization.CultureInfo.InvariantCulture, "Runnable<{0}>", jobResult);
 
-				outputPrefix = GetLogOutputPrefix(methodName);
+				outputPrefix = GetLogOutputPrefix(callerName);
 				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
 				mre?.Set();
@@ -230,16 +234,16 @@ public static class Executor
 				break;
 			default:
 
-				outputPrefix = GetLogOutputPrefix(methodName);
+				outputPrefix = GetLogOutputPrefix(callerName);
 				output.WriteLine(outputPrefix + "Worker Result: ---->>>> " + jobResult);
 
 				break;
 		}
 	}
 
-	public static async void VoidAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
+	private static async void VoidAwaiterRunner(String callerName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		String outputPrefix = GetLogOutputPrefix(methodName);
+		String outputPrefix = GetLogOutputPrefix(callerName);
 		String jobResult = "Initial Value";
 
 		ExecutionContext? execContextPrev = null;
@@ -363,9 +367,9 @@ public static class Executor
 
 		mre?.Set();
 	}
-	public static async Job JobAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
+	private static async Job JobAwaiterRunner(String callerName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		String outputPrefix = GetLogOutputPrefix(methodName);
+		String outputPrefix = GetLogOutputPrefix(callerName);
 		String jobResult = "Initial Value";
 
 		ExecutionContext? execContextPrev = null;
@@ -489,9 +493,9 @@ public static class Executor
 
 		mre?.Set();
 	}
-	public static async Job<String> JobTAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
+	private static async Job<String> JobTAwaiterRunner(String callerName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		String outputPrefix = GetLogOutputPrefix(methodName);
+		String outputPrefix = GetLogOutputPrefix(callerName);
 		String jobResult = "Initial Value";
 
 		ExecutionContext? execContextPrev = null;
@@ -617,9 +621,9 @@ public static class Executor
 
 		return jobResult;
 	}
-	public static async System.Threading.Tasks.Task TaskAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
+	private static async System.Threading.Tasks.Task TaskAwaiterRunner(String callerName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		String outputPrefix = GetLogOutputPrefix(methodName);
+		String outputPrefix = GetLogOutputPrefix(callerName);
 		String jobResult = "Initial Value";
 
 		ExecutionContext? execContextPrev = null;
@@ -743,9 +747,9 @@ public static class Executor
 
 		mre?.Set();
 	}
-	public static async System.Threading.Tasks.Task<String> TaskTAwaiterRunner(String methodName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
+	private static async System.Threading.Tasks.Task<String> TaskTAwaiterRunner(String callerName, IEnumerable<WorkerRunOptions> listWorkerOptions, ITestOutputHelper output, ManualResetEvent? mre)
 	{
-		String outputPrefix = GetLogOutputPrefix(methodName);
+		String outputPrefix = GetLogOutputPrefix(callerName);
 		String jobResult = "Initial Value";
 
 		ExecutionContext? execContextPrev = null;

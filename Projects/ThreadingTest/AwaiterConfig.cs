@@ -19,26 +19,28 @@ public class JobSchedulerUnitTest_AwaiterConfig
 	public JobSchedulerUnitTest_AwaiterConfig(ITestOutputHelper output)
 	{
 		Output = Executor.CreateOutputInterceptor(output);
+
+		ThreadLocalDataSlotValue = null;
 	}
 
 	private OutputInterceptor Output { get; set; }
 
-	private void RunJSL_AwaiterConfig(IEnumerable<WorkerType> listWorkerTypes)
+	private void RunJSL_AwaiterConfig(String callerName, IEnumerable<WorkerType> listWorkerTypes)
 	{
-		RunJSL_AwaiterConfig(listWorkerTypes.Select(workerType => new WorkerRunOptions(workerType)));
+		RunJSL_AwaiterConfig(callerName, listWorkerTypes.Select(workerType => new WorkerRunOptions(workerType)));
 	}
 
-	private void RunJSL_AwaiterConfig(IEnumerable<WorkerRunOptions> listWorkerOptions)
+	private void RunJSL_AwaiterConfig(String callerName, IEnumerable<WorkerRunOptions> listWorkerOptions)
 	{
-		String methodName = System.Reflection.MethodBase.GetCurrentMethod().Name;
-
-		Executor.TriggerAwaitRunner(methodName, WorkerType.Void, listWorkerOptions, Output);
+		Executor.TriggerAwaitRunner(callerName, WorkerType.Void, listWorkerOptions, Output);
 	}
 
 	#endregion // Initialization
 
 	#region 005-01X - Compare TPL vs JSL awaiter with or without configurations
 
+	// compares Job, JobT, Task, TaskT behavior in case if
+	// awaiting with NO ConfigureAwait for an asynchronous invocation
 	[Fact]
 	public void RunJSL_011_Compare_TPL_vs_JSL_AwaiterConfig_Default()
 	{
@@ -48,30 +50,32 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Int32 expectedDurationMS = 4_000, expectedDurationErrorPerc = 10;
 		System.Diagnostics.Stopwatch _stopWatch = System.Diagnostics.Stopwatch.StartNew();
 
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
+
 		// AwaiterConfig_Job
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerType[] { WorkerType.Job });
+		RunJSL_AwaiterConfig(methodName, new WorkerType[] { WorkerType.Job });
 		result = Output.GetLines();
 		result_AwaiterConfig_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_JobT
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerType[] { WorkerType.JobT });
+		RunJSL_AwaiterConfig(methodName, new WorkerType[] { WorkerType.JobT });
 		result = Output.GetLines();
 		result_AwaiterConfig_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_Task
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerType[] { WorkerType.Task });
+		RunJSL_AwaiterConfig(methodName, new WorkerType[] { WorkerType.Task });
 		result = Output.GetLines();
 		result_AwaiterConfig_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_TaskT
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerType[] { WorkerType.TaskT });
+		RunJSL_AwaiterConfig(methodName, new WorkerType[] { WorkerType.TaskT });
 		result = Output.GetLines();
 		result_AwaiterConfig_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
@@ -86,6 +90,8 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Assert.True(Math.Abs(_stopWatch.ElapsedMilliseconds - expectedDurationMS) < (expectedDurationMS * expectedDurationErrorPerc) / 100, "Test duration");
 	}
 
+	// compares Job, JobT, Task, TaskT behavior in case if
+	// awaiting with ConfigureAwait(true) for an asynchronous invocation
 	[Fact]
 	public void RunJSL_012_Compare_TPL_vs_JSL_AwaiterConfig_True()
 	{
@@ -95,30 +101,32 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Int32 expectedDurationMS = 4_000, expectedDurationErrorPerc = 10;
 		System.Diagnostics.Stopwatch _stopWatch = System.Diagnostics.Stopwatch.StartNew();
 
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
+		
 		// AwaiterConfig_Job
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Job, true) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Job, true) });
 		result = Output.GetLines();
 		result_AwaiterConfig_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_JobT
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.JobT, true) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.JobT, true) });
 		result = Output.GetLines();
 		result_AwaiterConfig_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_Task
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Task, true) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Task, true) });
 		result = Output.GetLines();
 		result_AwaiterConfig_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_TaskT
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.TaskT, true) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.TaskT, true) });
 		result = Output.GetLines();
 		result_AwaiterConfig_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
@@ -133,6 +141,8 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Assert.True(Math.Abs(_stopWatch.ElapsedMilliseconds - expectedDurationMS) < (expectedDurationMS * expectedDurationErrorPerc) / 100, "Test duration");
 	}
 
+	// compares Job, JobT, Task, TaskT behavior in case if
+	// awaiting with ConfigureAwait(false) for an asynchronous invocation
 	[Fact]
 	public void RunJSL_013_Compare_TPL_vs_JSL_AwaiterConfig_False()
 	{
@@ -142,30 +152,32 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Int32 expectedDurationMS = 4_000, expectedDurationErrorPerc = 10;
 		System.Diagnostics.Stopwatch _stopWatch = System.Diagnostics.Stopwatch.StartNew();
 
+		String methodName = System.Reflection.MethodBase.GetCurrentMethod()!.Name;
+		
 		// AwaiterConfig_Job
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Job, false) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Job, false) });
 		result = Output.GetLines();
 		result_AwaiterConfig_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_JobT
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.JobT, false) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.JobT, false) });
 		result = Output.GetLines();
 		result_AwaiterConfig_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_Task
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Task, false) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Task, false) });
 		result = Output.GetLines();
 		result_AwaiterConfig_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_TaskT
 		Output.Reset();
-		RunJSL_AwaiterConfig(new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.TaskT, false) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.TaskT, false) });
 		result = Output.GetLines();
 		result_AwaiterConfig_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
@@ -183,6 +195,10 @@ public class JobSchedulerUnitTest_AwaiterConfig
 	#endregion // 005-00X - Compare TPL vs JSL awaiter with or without configurations
 
 	#region 005-02X - Thread Locals
+
+	[ThreadStatic]
+	private static String? ThreadStaticString;
+	private LocalDataStoreSlot? ThreadLocalDataSlotValue { get; set; }
 
 	[Fact]
 	public void RunJSL_020_Compare_TPL_vs_JSL_ThreadLocals()
@@ -217,7 +233,7 @@ public class JobSchedulerUnitTest_AwaiterConfig
 	private void RunJSL_021_VerifyThreadLocals_Job()
 	{
 		using System.Threading.ManualResetEvent mre = new(false);
-		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod().Name);
+		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name);
 		if (Output != null)
 			Output.WriteLine(outputPrefix + "Thread Starting");
 
@@ -241,10 +257,10 @@ public class JobSchedulerUnitTest_AwaiterConfig
 			Output.WriteLine(outputPrefix + "Thread Stopped");
 	}
 
-	private async void VerifyThreadLocals_Job_ThreadProc(Object arg)
+	private async void VerifyThreadLocals_Job_ThreadProc(Object? arg)
 	{
-		ManualResetEvent mre = (ManualResetEvent)arg;
-		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod().Name);
+		ManualResetEvent mre = (ManualResetEvent)arg!;
+		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name);
 
 		// Set thread locals
 		ThreadLocalDataSlotValue = System.Threading.Thread.GetNamedDataSlot("TLS Value");
@@ -264,7 +280,9 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		VerifyThreadLocals_DumpToOutput("After Run No Configuration: ");
 
 		// run the job (in a parallel thread)
+#pragma warning disable CS0618 // Type or member is obsolete
 		await Job.Run(VerifyThreadLocals_DumpToOutput, "During Run Null Thread Context: ");
+#pragma warning restore CS0618 // Type or member is obsolete
 
 		// call within the same thread context
 		VerifyThreadLocals_DumpToOutput("After Run Null Thread Context: ");
@@ -276,7 +294,7 @@ public class JobSchedulerUnitTest_AwaiterConfig
 	private void RunJSL_022_VerifyThreadLocals_Task()
 	{
 		using ManualResetEvent mre = new(false);
-		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod().Name);
+		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name);
 		if (Output != null)
 			Output.WriteLine(outputPrefix + "Thread Starting");
 
@@ -300,10 +318,10 @@ public class JobSchedulerUnitTest_AwaiterConfig
 			Output.WriteLine(outputPrefix + "Thread Stopped");
 	}
 
-	private async void VerifyThreadLocals_Task_ThreadProc(Object arg)
+	private async void VerifyThreadLocals_Task_ThreadProc(Object? arg)
 	{
-		ManualResetEvent mre = (ManualResetEvent)arg;
-		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod().Name);
+		ManualResetEvent mre = (ManualResetEvent)arg!;
+		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name);
 
 		// Set thread locals
 		ThreadLocalDataSlotValue = System.Threading.Thread.GetNamedDataSlot("TLS Value");
@@ -336,17 +354,13 @@ public class JobSchedulerUnitTest_AwaiterConfig
 	}
 
 
-	[ThreadStatic]
-	private static String ThreadStaticString;
-	private LocalDataStoreSlot ThreadLocalDataSlotValue { get; set; }
-
-	private void VerifyThreadLocals_DumpToOutput(Object objPrefixString)
+	private void VerifyThreadLocals_DumpToOutput(Object? objPrefixString)
 	{
-		String outputPrefix = (String)objPrefixString;// Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod().Name);
+		String outputPrefix = (String)objPrefixString!;
 
 		// test thread locals
-		String tlsValue = System.Threading.Thread.GetData(ThreadLocalDataSlotValue) as String;
-		String staticValue = ThreadStaticString;
+		String? tlsValue = System.Threading.Thread.GetData(ThreadLocalDataSlotValue!) as String;
+		String? staticValue = ThreadStaticString;
 		if (String.IsNullOrEmpty(tlsValue))
 			tlsValue = "[None]";
 		if (String.IsNullOrEmpty(staticValue))

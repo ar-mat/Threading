@@ -5,16 +5,19 @@ using Xunit.Abstractions;
 
 namespace Armat.Threading;
 
+// Acts as a proxy layer on top of ITestOutputHelper interface
+// and allows reading the output data and resetting it for teh consumers
+// is used by test cases to trace asynchronous execution logs and verify the execution behavior
 public class OutputInterceptor : ITestOutputHelper
 {
 	public OutputInterceptor(ITestOutputHelper inner)
 	{
 		Inner = inner;
-		StringBuilder = new System.Text.StringBuilder();
+		StringBuilder = new StringBuilder();
 	}
 
 	public ITestOutputHelper Inner { get; }
-	private System.Text.StringBuilder StringBuilder { get; }
+	private StringBuilder StringBuilder { get; }
 
 	public void WriteLine(String message)
 	{
