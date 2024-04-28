@@ -124,8 +124,10 @@ public static class Executor
 
 		// run the test in a separate thread to get rid of Task-s call stack
 		// and infrastructure used in the XUnit framework
-		Thread testThread = new(TriggerAwaitRunner_ThreadProc);
-		testThread.Name = "TestThreadProc";
+		Thread testThread = new(TriggerAwaitRunner_ThreadProc)
+		{
+			Name = "TestThreadProc"
+		};
 		testThread.Start(new Tuple<String, WorkerType, IEnumerable<WorkerRunOptions>, ITestOutputHelper, ManualResetEvent>(callerName, resultType, listWorkerOptions, output, mre));
 
 		// wait until the thread starts

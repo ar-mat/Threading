@@ -26,14 +26,14 @@ public class JobSchedulerUnitTest_Performance
 	#region 008-010 & 008-020 - Compare Jobs vs Tasks overhead
 
 	[Fact]
-	public void RunJSL_010_Compare_TPL_vs_JSL_PerformaneSequential()
+	public void RunJSL_010_Compare_TPL_vs_JSL_PerformanceSequential()
 	{
 		//RunJSL_011_VerifyJobsPerformanceSequential();
 		//RunJSL_012_VerifyTasksPerformanceSequential();
 
-		System.Diagnostics.Stopwatch _stopWatchJobsPerfromance = System.Diagnostics.Stopwatch.StartNew();
+		System.Diagnostics.Stopwatch _stopWatchJobsPerformance = System.Diagnostics.Stopwatch.StartNew();
 		Int64 resultJob = RunJSL_011_VerifyJobsPerformanceSequential();
-		Int64 jobsDuration = _stopWatchJobsPerfromance.ElapsedMilliseconds;
+		Int64 jobsDuration = _stopWatchJobsPerformance.ElapsedMilliseconds;
 		Output.WriteLine($"Job result = {resultJob}, duration = {jobsDuration} ms");
 
 		System.Diagnostics.Stopwatch _stopWatchTasksPerformance = System.Diagnostics.Stopwatch.StartNew();
@@ -49,14 +49,14 @@ public class JobSchedulerUnitTest_Performance
 	}
 
 	[Fact]
-	public void RunJSL_020_Compare_TPL_vs_JSL_PerformaneParallel()
+	public void RunJSL_020_Compare_TPL_vs_JSL_PerformanceParallel()
 	{
 		//RunJSL_021_VerifyJobsPerformanceParallel();
 		//RunJSL_022_VerifyTasksPerformanceParallel();
 
-		System.Diagnostics.Stopwatch _stopWatchJobsPerfromance = System.Diagnostics.Stopwatch.StartNew();
+		System.Diagnostics.Stopwatch _stopWatchJobsPerformance = System.Diagnostics.Stopwatch.StartNew();
 		Int64 resultJob = RunJSL_021_VerifyJobsPerformanceParallel();
-		Int64 jobsDuration = _stopWatchJobsPerfromance.ElapsedMilliseconds;
+		Int64 jobsDuration = _stopWatchJobsPerformance.ElapsedMilliseconds;
 		Output.WriteLine($"Job result = {resultJob}, duration = {jobsDuration} ms");
 
 		System.Diagnostics.Stopwatch _stopWatchTasksPerformance = System.Diagnostics.Stopwatch.StartNew();
@@ -130,23 +130,23 @@ public class JobSchedulerUnitTest_Performance
 		}
 	}
 
-	private static Int64 SumTuple(Object args)
+	private static Int64 SumTuple(Object? args)
 	{
-		Tuple<Int64, Int64> tuple = args as Tuple<Int64, Int64>;
+		Tuple<Int64, Int64> tuple = (Tuple<Int64, Int64>)args!;
 
 		return tuple.Item1 + tuple.Item2;
 	}
-	private static Int64 SumRunnable(Job prevRunnable, Object args)
+	private static Int64 SumRunnable(Job prevRunnable, Object? args)
 	{
 		Job<Int64> runnable = (Job<Int64>)prevRunnable;
 
-		return runnable.Result + (Int32)args;
+		return runnable.Result + (Int32)args!;
 	}
-	private static Int64 SumRunnable(System.Threading.Tasks.Task prevRunnable, Object args)
+	private static Int64 SumRunnable(System.Threading.Tasks.Task prevRunnable, Object? args)
 	{
 		System.Threading.Tasks.Task<Int64> runnable = (System.Threading.Tasks.Task<Int64>)prevRunnable;
 
-		return runnable.Result + (Int32)args;
+		return runnable.Result + (Int32)args!;
 	}
 
 	private static async Job<Int64> SumJob(Int32 min, Int32 max, Boolean runParallelly)
@@ -167,7 +167,9 @@ public class JobSchedulerUnitTest_Performance
 				listJobs.Add(nextRunnable2);
 			}
 
+#pragma warning disable CS0618 // Type or member is obsolete
 			Int64[] results = await Job.WhenAll(listJobs);
+#pragma warning restore CS0618 // Type or member is obsolete
 			foreach (Int64 value in results)
 				sum += value;
 		}
@@ -180,7 +182,9 @@ public class JobSchedulerUnitTest_Performance
 				Job<Int64> nextRunnable2 = nextRunnable.ContinueWith(SumRunnable, (Object)(index + 3));
 
 				firstRunnable.Run();
+#pragma warning disable CS0618 // Type or member is obsolete
 				Int64 sumOf4Items = await nextRunnable2;
+#pragma warning restore CS0618 // Type or member is obsolete
 				sum += sumOf4Items;
 			}
 		}
@@ -236,9 +240,9 @@ public class JobSchedulerUnitTest_Performance
 		//RunJSL_021_JobAwaitInLoop();
 		//RunJSL_022_TaskAwaitInLoop();
 
-		System.Diagnostics.Stopwatch _stopWatchJobsPerfromance = System.Diagnostics.Stopwatch.StartNew();
+		System.Diagnostics.Stopwatch _stopWatchJobsPerformance = System.Diagnostics.Stopwatch.StartNew();
 		RunJSL_031_JobAwaitInLoop();
-		Int64 jobsDuration = _stopWatchJobsPerfromance.ElapsedMilliseconds;
+		Int64 jobsDuration = _stopWatchJobsPerformance.ElapsedMilliseconds;
 		Output.WriteLine($"Job duration = {jobsDuration} ms");
 
 		System.Diagnostics.Stopwatch _stopWatchTasksPerformance = System.Diagnostics.Stopwatch.StartNew();
@@ -262,8 +266,10 @@ public class JobSchedulerUnitTest_Performance
 
 	private static async Job JobAwaitInLoop()
 	{
+#pragma warning disable CS0618 // Type or member is obsolete
 		for (Int32 i = 0; i < 4000; i++)
 			await Job.Delay(1);
+#pragma warning restore CS0618 // Type or member is obsolete
 	}
 
 	//[Fact]
@@ -290,9 +296,9 @@ public class JobSchedulerUnitTest_Performance
 		//RunJSL_021_JobAwaitInFunc();
 		//RunJSL_022_TaskAwaitInFunc();
 
-		System.Diagnostics.Stopwatch _stopWatchJobsPerfromance = System.Diagnostics.Stopwatch.StartNew();
+		System.Diagnostics.Stopwatch _stopWatchJobsPerformance = System.Diagnostics.Stopwatch.StartNew();
 		RunJSL_041_JobAwaitInFunc();
-		Int64 jobsDuration = _stopWatchJobsPerfromance.ElapsedMilliseconds;
+		Int64 jobsDuration = _stopWatchJobsPerformance.ElapsedMilliseconds;
 		Output.WriteLine($"Job duration = {jobsDuration} ms");
 
 		System.Diagnostics.Stopwatch _stopWatchTasksPerformance = System.Diagnostics.Stopwatch.StartNew();
@@ -316,15 +322,19 @@ public class JobSchedulerUnitTest_Performance
 
 	private static async Job JobAwaitInFunc()
 	{
+#pragma warning disable CS0618 // Type or member is obsolete
 		for (Int32 i = 0; i < 4000; i++)
 			await JobAwaitFunc();
+#pragma warning restore CS0618 // Type or member is obsolete
 	}
 
 	private static async Job JobAwaitFunc()
 	{
+#pragma warning disable CS0618 // Type or member is obsolete
 		Executor.SleepAndReturnVoid(1);
 		await Job.Delay(1);
 		Executor.SleepAndReturnVoid(1);
+#pragma warning restore CS0618 // Type or member is obsolete
 	}
 
 
@@ -338,8 +348,10 @@ public class JobSchedulerUnitTest_Performance
 
 	private static async System.Threading.Tasks.Task TaskAwaitInFunc()
 	{
+#pragma warning disable CS0618 // Type or member is obsolete
 		for (Int32 i = 0; i < 4000; i++)
 			await TaskAwaitFunc();
+#pragma warning restore CS0618 // Type or member is obsolete
 	}
 
 	private static async Job TaskAwaitFunc()

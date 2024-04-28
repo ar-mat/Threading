@@ -56,17 +56,20 @@ public class JobSchedulerUnitTest_MultipleSchedulers
 		Assert.True(Math.Abs(_stopWatch.ElapsedMilliseconds - expectedDurationMS) < (expectedDurationMS * expectedDurationErrorPerc) / 100, "Test duration");
 	}
 
-	private async void JobProcA(Object arg)
+	private async void JobProcA(Object? arg)
 	{
-		ManualResetEvent mre = (ManualResetEvent)arg;
+		ManualResetEvent mre = (ManualResetEvent)arg!;
 
+#pragma warning disable CS0618 // Type or member is obsolete
 		await JobProcA(true);
+#pragma warning restore CS0618 // Type or member is obsolete
 
 		mre.Set();
 	}
 
 	private async Job JobProcA(Boolean callAnother)
 	{
+#pragma warning disable CS0618 // Type or member is obsolete
 		if (!callAnother)
 		{
 			Output.WriteLine("JobProcA - Before Wait 1");
@@ -91,6 +94,7 @@ public class JobSchedulerUnitTest_MultipleSchedulers
 			await Job.Run(Executor.SleepAndReturnVoid());
 			Output.WriteLine("JobProcA - After Wait 2");
 		}
+#pragma warning restore CS0618 // Type or member is obsolete
 	}
 
 	#endregion // 006-010 - Verify Jobs run in the same scheduler
@@ -136,18 +140,21 @@ public class JobSchedulerUnitTest_MultipleSchedulers
 		Assert.True(Math.Abs(_stopWatch.ElapsedMilliseconds - expectedDurationMS) < (expectedDurationMS * expectedDurationErrorPerc) / 100, "Test duration");
 	}
 
-	private async void JobProcB(Object arg)
+	private async void JobProcB(Object? arg)
 	{
-		Tuple<JobScheduler, ManualResetEvent> tuple = (Tuple<JobScheduler, ManualResetEvent>)arg;
+		Tuple<JobScheduler, ManualResetEvent> tuple = (Tuple<JobScheduler, ManualResetEvent>)arg!;
 		JobScheduler scheduler = tuple.Item1;
 		ManualResetEvent mre = tuple.Item2;
 
+#pragma warning disable CS0618 // Type or member is obsolete
 		await JobProcB(scheduler, true);
+#pragma warning restore CS0618 // Type or member is obsolete
 
 		mre.Set();
 	}
-	private async Job JobProcB(JobScheduler scheduler, Boolean callAnother)
+	private async Job JobProcB(JobScheduler? scheduler, Boolean callAnother)
 	{
+#pragma warning disable CS0618 // Type or member is obsolete
 		if (scheduler == null)
 		{
 			// will run in scheduler A
@@ -158,7 +165,7 @@ public class JobSchedulerUnitTest_MultipleSchedulers
 			// get the top level job - it should be run in Job Scheduler B
 			Output.WriteLine("JobProcA - Before Call JobProcA - to run in scheduler B");
 			ManualResetEvent mre = new(false);
-			await Job.Run(JobProcA, mre, CancellationToken.None, JobCreationOptions.None, Job.Current.Root.Scheduler);
+			await Job.Run(JobProcA, mre, CancellationToken.None, JobCreationOptions.None, Job.Current!.Root.Scheduler);
 			mre.WaitOne();
 			mre.Dispose();
 			Output.WriteLine("JobProcA - After Call JobProcA - to run in scheduler A");
@@ -197,6 +204,7 @@ public class JobSchedulerUnitTest_MultipleSchedulers
 			await Job.Run(Executor.SleepAndReturnVoid());
 			Output.WriteLine("JobProcB - After Wait 2");
 		}
+#pragma warning restore CS0618 // Type or member is obsolete
 	}
 
 	#endregion // 006-010 - Verify Jobs switch between schedulers

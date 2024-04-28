@@ -105,28 +105,28 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		
 		// AwaiterConfig_Job
 		Output.Reset();
-		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Job, true) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new(WorkerType.Job, true) });
 		result = Output.GetLines();
 		result_AwaiterConfig_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_JobT
 		Output.Reset();
-		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.JobT, true) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new(WorkerType.JobT, true) });
 		result = Output.GetLines();
 		result_AwaiterConfig_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_Task
 		Output.Reset();
-		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Task, true) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new(WorkerType.Task, true) });
 		result = Output.GetLines();
 		result_AwaiterConfig_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_TaskT
 		Output.Reset();
-		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.TaskT, true) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new(WorkerType.TaskT, true) });
 		result = Output.GetLines();
 		result_AwaiterConfig_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
@@ -156,28 +156,28 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		
 		// AwaiterConfig_Job
 		Output.Reset();
-		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Job, false) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new(WorkerType.Job, false) });
 		result = Output.GetLines();
 		result_AwaiterConfig_Job = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_JobT
 		Output.Reset();
-		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.JobT, false) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new(WorkerType.JobT, false) });
 		result = Output.GetLines();
 		result_AwaiterConfig_JobT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_Task
 		Output.Reset();
-		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.Task, false) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new(WorkerType.Task, false) });
 		result = Output.GetLines();
 		result_AwaiterConfig_Task = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
 
 		// AwaiterConfig_TaskT
 		Output.Reset();
-		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new WorkerRunOptions(WorkerType.TaskT, false) });
+		RunJSL_AwaiterConfig(methodName, new WorkerRunOptions[] { new(WorkerType.TaskT, false) });
 		result = Output.GetLines();
 		result_AwaiterConfig_TaskT = Executor.RemoveLogOutputPrefix(result);
 		Output.WriteLine(String.Empty);
@@ -234,8 +234,8 @@ public class JobSchedulerUnitTest_AwaiterConfig
 	{
 		using System.Threading.ManualResetEvent mre = new(false);
 		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name);
-		if (Output != null)
-			Output.WriteLine(outputPrefix + "Thread Starting");
+
+		Output.WriteLine(outputPrefix + "Thread Starting");
 
 		// run the test in a separate thread to get rid of Task-s
 		// call stack and infrastructure used in the XUnit framework
@@ -248,13 +248,12 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		// wait until the thread starts
 		Executor.SleepAndReturnVoid(Executor.TaskCompletionDelayMS)();
 
-		if (Output != null)
-			Output.WriteLine(outputPrefix + "Thread Waiting");
+		Output.WriteLine(outputPrefix + "Thread Waiting");
+
 		mre.WaitOne();
 		testThread.Join();
 
-		if (Output != null)
-			Output.WriteLine(outputPrefix + "Thread Stopped");
+		Output.WriteLine(outputPrefix + "Thread Stopped");
 	}
 
 	private async void VerifyThreadLocals_Job_ThreadProc(Object? arg)
@@ -264,8 +263,7 @@ public class JobSchedulerUnitTest_AwaiterConfig
 
 		// Set thread locals
 		ThreadLocalDataSlotValue = System.Threading.Thread.GetNamedDataSlot("TLS Value");
-		if (ThreadLocalDataSlotValue == null)
-			ThreadLocalDataSlotValue = System.Threading.Thread.AllocateNamedDataSlot("TLS Value");
+		ThreadLocalDataSlotValue ??= System.Threading.Thread.AllocateNamedDataSlot("TLS Value");
 
 		ThreadStaticString = "Well Initialized";
 		System.Threading.Thread.SetData(ThreadLocalDataSlotValue, "Well Initialized");
@@ -295,8 +293,8 @@ public class JobSchedulerUnitTest_AwaiterConfig
 	{
 		using ManualResetEvent mre = new(false);
 		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name);
-		if (Output != null)
-			Output.WriteLine(outputPrefix + "Thread Starting");
+
+		Output.WriteLine(outputPrefix + "Thread Starting");
 
 		// run the test in a separate thread to get rid of Task-s
 		// call stack and infrastructure used in the XUnit framework
@@ -309,13 +307,12 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		// wait until the thread starts
 		Executor.SleepAndReturnVoid(Executor.TaskCompletionDelayMS)();
 
-		if (Output != null)
-			Output.WriteLine(outputPrefix + "Thread Waiting");
+		Output.WriteLine(outputPrefix + "Thread Waiting");
+
 		mre.WaitOne();
 		testThread.Join();
 
-		if (Output != null)
-			Output.WriteLine(outputPrefix + "Thread Stopped");
+		Output.WriteLine(outputPrefix + "Thread Stopped");
 	}
 
 	private async void VerifyThreadLocals_Task_ThreadProc(Object? arg)
@@ -325,8 +322,7 @@ public class JobSchedulerUnitTest_AwaiterConfig
 
 		// Set thread locals
 		ThreadLocalDataSlotValue = System.Threading.Thread.GetNamedDataSlot("TLS Value");
-		if (ThreadLocalDataSlotValue == null)
-			ThreadLocalDataSlotValue = System.Threading.Thread.AllocateNamedDataSlot("TLS Value");
+		ThreadLocalDataSlotValue ??= System.Threading.Thread.AllocateNamedDataSlot("TLS Value");
 
 		ThreadStaticString = "Well Initialized";
 		System.Threading.Thread.SetData(ThreadLocalDataSlotValue, "Well Initialized");
