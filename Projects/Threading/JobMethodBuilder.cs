@@ -9,7 +9,6 @@ public interface IJobMethodBuilderAwaiter
 	void MethodBuilderOnCompleted(Job MethodBuilderJob);
 }
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "<Pending>")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "<Pending>")]
 public struct JobMethodBuilder
 {
@@ -25,8 +24,10 @@ public struct JobMethodBuilder
 		return new JobMethodBuilder();
 	}
 
+#pragma warning disable IDE0251 // Make member 'readonly'
 	public void Start<TStateMachine>(ref TStateMachine stateMachine)
 		where TStateMachine : IAsyncStateMachine
+#pragma warning restore IDE0251 // Make member 'readonly'
 	{
 		using var context = new JobMethodBuilderContext();
 
@@ -36,7 +37,9 @@ public struct JobMethodBuilder
 		_tplAsyncTaskMethodBuilder.Start(ref stateMachine);
 	}
 
+#pragma warning disable IDE0251 // Make member 'readonly'
 	public void SetStateMachine(IAsyncStateMachine stateMachine)
+#pragma warning restore IDE0251 // Make member 'readonly'
 	{
 		// this is an obsolete function, should never be called
 		_tplAsyncTaskMethodBuilder.SetStateMachine(stateMachine);
@@ -125,8 +128,7 @@ public struct JobMethodBuilder
 
 	private ResultJob GetOrCreateResult()
 	{
-		if (_job == null)
-			_job = new ResultJob();
+		_job ??= new ResultJob();
 
 		return _job;
 	}
@@ -239,8 +241,6 @@ public struct JobMethodBuilder
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1000:Do not declare static members on generic types", Justification = "<Pending>")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "<Pending>")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815:Override equals and operator equals on value types", Justification = "<Pending>")]
 public struct JobMethodBuilderT<TResult>
 {
 	private static AsyncTaskMethodBuilder<TResult> _tplAsyncTaskMethodBuilder = AsyncTaskMethodBuilder<TResult>.Create();
@@ -255,8 +255,10 @@ public struct JobMethodBuilderT<TResult>
 		return new JobMethodBuilderT<TResult>();
 	}
 
+#pragma warning disable IDE0251 // Make member 'readonly'
 	public void Start<TStateMachine>(ref TStateMachine stateMachine)
 		where TStateMachine : IAsyncStateMachine
+#pragma warning restore IDE0251 // Make member 'readonly'
 	{
 		using var context = new JobMethodBuilderContext();
 
@@ -266,7 +268,9 @@ public struct JobMethodBuilderT<TResult>
 		_tplAsyncTaskMethodBuilder.Start(ref stateMachine);
 	}
 
+#pragma warning disable IDE0251 // Make member 'readonly'
 	public void SetStateMachine(IAsyncStateMachine stateMachine)
+#pragma warning restore IDE0251 // Make member 'readonly'
 	{
 		// this is an obsolete function, should never be called
 		_tplAsyncTaskMethodBuilder.SetStateMachine(stateMachine);
@@ -356,8 +360,7 @@ public struct JobMethodBuilderT<TResult>
 
 	private ResultJob GetOrCreateResult()
 	{
-		if (_job == null)
-			_job = new ResultJob();
+		_job ??= new ResultJob();
 
 		return _job;
 	}

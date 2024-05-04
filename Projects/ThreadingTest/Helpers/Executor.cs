@@ -208,9 +208,7 @@ public static class Executor
 				break;
 			case WorkerType.Task:
 
-#pragma warning disable CS0618 // Type or member is obsolete
 				await TaskAwaiterRunner(callerName, listWorkerOptions, output, null);
-#pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = "Runnable";
 
@@ -222,9 +220,7 @@ public static class Executor
 				break;
 			case WorkerType.TaskT:
 
-#pragma warning disable CS0618 // Type or member is obsolete
 				jobResult = await TaskTAwaiterRunner(callerName, listWorkerOptions, output, null);
-#pragma warning restore CS0618 // Type or member is obsolete
 
 				jobResult = String.Format(System.Globalization.CultureInfo.InvariantCulture, "Runnable<{0}>", jobResult);
 
@@ -315,9 +311,7 @@ public static class Executor
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
-#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -331,9 +325,7 @@ public static class Executor
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
-#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -441,9 +433,7 @@ public static class Executor
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
-#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -457,9 +447,7 @@ public static class Executor
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
-#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -567,9 +555,7 @@ public static class Executor
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
-#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -583,9 +569,7 @@ public static class Executor
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
-#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -666,7 +650,7 @@ public static class Executor
 							{
 #pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
-#pragma warning disable CS0618 // Type or member is obsolete
+#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -682,7 +666,7 @@ public static class Executor
 							{
 #pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
-#pragma warning disable CS0618 // Type or member is obsolete
+#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -695,9 +679,7 @@ public static class Executor
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
-#pragma warning disable CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -711,9 +693,7 @@ public static class Executor
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
-#pragma warning disable CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -821,9 +801,7 @@ public static class Executor
 							System.Threading.Tasks.Task worker = System.Threading.Tasks.Task.Run(SleepAndReturnVoid());
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								await worker;
-#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{
@@ -837,9 +815,7 @@ public static class Executor
 							System.Threading.Tasks.Task<String> worker = System.Threading.Tasks.Task<String>.Run(SleepAndReturnString(stage));
 							if (!runOptions.ConfigureAwait.HasValue)
 							{
-#pragma warning disable CS0618 // Type or member is obsolete
 								jobResult = await worker;
-#pragma warning restore CS0618 // Type or member is obsolete
 							}
 							else
 							{

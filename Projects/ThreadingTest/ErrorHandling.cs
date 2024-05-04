@@ -10,7 +10,6 @@ namespace Armat.Threading;
 
 [TestCaseOrderer("Armat.Test.PriorityOrderer", "ArmatUtilsTest")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "<Pending>")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
 public class JobSchedulerUnitTest_ErrorHandling
 {
 	#region Initialization
@@ -161,9 +160,7 @@ public class JobSchedulerUnitTest_ErrorHandling
 		{
 			try
 			{
-#pragma warning disable CS0618 // Type or member is obsolete
 				await FailingTask(exceptionStage);
-#pragma warning restore CS0618 // Type or member is obsolete
 
 				result[exceptionStage] = null;
 				Output.WriteLine($"Task [{exceptionStage}] succeeded");
@@ -213,16 +210,12 @@ public class JobSchedulerUnitTest_ErrorHandling
 			throw new ApplicationException();
 
 		// stage 1
-#pragma warning disable CS0618 // Type or member is obsolete
 		await System.Threading.Tasks.Task.Run(Executor.SleepAndReturnVoid(1_000));
-#pragma warning restore CS0618 // Type or member is obsolete
 		if (exceptionStage == 1)
 			throw new ApplicationException();
 
 		// stage 2
-#pragma warning disable CS0618 // Type or member is obsolete
 		await System.Threading.Tasks.Task.Run(Executor.SleepAndReturnVoid(1_000));
-#pragma warning restore CS0618 // Type or member is obsolete
 		if (exceptionStage == 2)
 			throw new ApplicationException();
 

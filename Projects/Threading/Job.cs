@@ -166,10 +166,8 @@ public class Job : IAsyncResult, IDisposable
 	private const Int32 ALL_CREATION_OPTIONS = 0x8005F;
 	private const Int32 ALL_CONTINUATION_OPTIONS = 0x8707F;
 	private const Int32 JOB_CONTINUATION_FLAG = 0x0100;
-#pragma warning disable CA1707 // Identifiers should not contain underscores
 	protected const Int32 JOB_LIGHTWEIGHT_FLAG = 0x0200;
 	protected const Int32 JOB_METHODBUILDERRESULT_FLAG = 0x0400;
-#pragma warning restore CA1707 // Identifiers should not contain underscores
 
 	private static Int32 _idCounter = COMPLTETED_JOB_ID;
 	public Int32 Id { get; }
@@ -509,9 +507,7 @@ public class Job : IAsyncResult, IDisposable
 	}
 	internal protected virtual void ResetStatus()
 	{
-		ManualResetEventSlim? waitHandle = _waitHandle;
-		if (waitHandle != null)
-			waitHandle.Reset();
+		_waitHandle?.Reset();
 
 		List<ExceptionDispatchInfo>? listExceptions = _listExceptions;
 		if (listExceptions != null)
@@ -2242,7 +2238,7 @@ public class Job<TResult> : Job
 	{
 		throw new InvalidOperationException();
 	}
-	private static Func<TResult> _noFunction = new Func<TResult>(FunctionNotSetProc);
+	private static readonly Func<TResult> _noFunction = new (FunctionNotSetProc);
 	protected static Func<TResult> NoFunction
 	{
 		get { return _noFunction; }
