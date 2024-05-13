@@ -40,7 +40,8 @@ public class JobScheduler : JobSchedulerBase
 		_poolThreadsWaitHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
 		_longRunningThreadsWaitHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
 
-		_jobsQueue = new JobsQueue();
+		_jobsQueue = new JobsQueue(JOBS_QUEUE_UPPER_LIMIT);
+		_jobsQueueLongRunning = new JobsQueue(JOBS_QUEUE_LONG_RUNNING_UPPER_LIMIT);
 		_jobsInPool = new System.Collections.Concurrent.ConcurrentDictionary<Job, JobStatus>();
 
 		_statsCalculator = new JobSchedulerStatisticsCalculator();
@@ -68,6 +69,8 @@ public class JobScheduler : JobSchedulerBase
 	private const String DEFAULT_NAME = "JS"; //"JobScheduler";
 	private const Int32 POOL_THEADS_IDLE_TIMEOUT_MS = 1000;
 	private const Int32 JOB_EXECUTION_WAIT_TIMEOUT_MS = 15000;
+	private const Int32 JOBS_QUEUE_UPPER_LIMIT = 100000;
+	private const Int32 JOBS_QUEUE_LONG_RUNNING_UPPER_LIMIT = 1000;
 
 	private static readonly JobScheduler _default = new(DEFAULT_NAME, 0, Environment.ProcessorCount * 2, Environment.ProcessorCount);
 	public static new JobScheduler Default
@@ -130,6 +133,7 @@ public class JobScheduler : JobSchedulerBase
 
 	// thread-safe queue of jobs
 	private readonly JobsQueue _jobsQueue;
+	private readonly JobsQueue _jobsQueueLongRunning;
 	// dictionary of jobs to their status values
 	// this dictionary is needed to associate statuses with job instances
 	// Note: status in this dictionary may not match the one in the Job instance
@@ -140,7 +144,7 @@ public class JobScheduler : JobSchedulerBase
 
 	public override Int32 PendingJobsCount
 	{
-		get => _jobsQueue.Count;
+		get => _jobsQueue.Count + _jobsQueueLongRunning.Count;
 	}
 
 	public JobSchedulerStatistics Statistics => _statsCalculator.JobStatistics;
@@ -364,45 +368,15 @@ public class JobScheduler : JobSchedulerBase
 		if (MaxLongRunningThreads <= 0)
 			throw new NotSupportedException("jobScheduler does not support execution of long running jobs");
 
-		Thread? thread = null;
-		while (!IsStopped)
-		{
-			thread = _dedicatedThreads.AddIf(_fnLongRunningThreadAllocator, _fnLongRunningThreadAllocatorCondition);
-			if (thread != null)
-				break;
+		// enqueue a long running job so that one of the long-running threads peeks it
+		_jobsQueueLongRunning.Enqueue(job);
 
-			// reset the wait handle to wait for the next thread creation slot
-			_longRunningThreadsWaitHandle.Reset();
+		// signal the threads to start processing jobs
+		_longRunningThreadsWaitHandle.Set();
 
-			// check if there's anything changed (i.e. it the scheduler stopped)
-			if (IsStopped)
-			{
-				_longRunningThreadsWaitHandle.Set();
-				break;
-			}
-
-			// check if there's anything changed (i.e. there's a now slot for the thread)
-			thread = _dedicatedThreads.AddIf(_fnLongRunningThreadAllocator, _fnLongRunningThreadAllocatorCondition);
-			if (thread != null)
-			{
-				_longRunningThreadsWaitHandle.Set();
-				break;
-			}
-
-			// wait for a new available slot for a new thread
-			_longRunningThreadsWaitHandle.WaitOne();
-		}
-
-		if (thread != null)
-		{
-			// start the thread
-			thread.Start(job);
-		}
-		else
-		{
-			// cancel the job
-			UpdateJobStatus(job, JobStatus.Canceled, JobStatus.WaitingForActivation);
-		}
+		// this will start a long-running thread if the limit is not reached
+		Thread? thread = _dedicatedThreads.AddIf(_fnLongRunningThreadAllocator, _fnLongRunningThreadAllocatorCondition);
+		thread?.Start();
 	}
 
 	private void EnqueueAsyncJob(Job job)
@@ -435,18 +409,69 @@ public class JobScheduler : JobSchedulerBase
 		return true;
 	}
 
-	private void DedicatedThreadProc(Object? param)
+	private void DedicatedThreadProc(Object? unusedParam)
 	{
-		RunJobCore((Job)param!);
+		Thread currentThread = Thread.CurrentThread;
+		Job? job;
 
-		// remove the current thread once it's completed
-		_dedicatedThreads.Remove(Thread.CurrentThread);
+		// check if there are any pending jobs in _jobsQueueLongRunning
+		while (!IsStopped)
+		{
+			// try to dequeue and run a long-running job
+			job = _jobsQueueLongRunning.Dequeue();
+			if (job != null)
+			{
+				// Run the job
+				RunJobCore(job);
+				continue;
+			}
 
-		// unblock start of any waiting long running jobs
-		_longRunningThreadsWaitHandle.Set();
+			// Note: We should not reset the wait handle if the scheduled executor is stopped, so it could release the thread ASAP
+			if (!IsStopped)
+			{
+				// there's no job left in the queue
+				// reset the wait handle and exit the thread if not needed any longer
+				_longRunningThreadsWaitHandle.Reset();
+
+				// restore the wit condition status if it has been reset incorrectly
+				if (!_jobsQueueLongRunning.IsEmpty)
+				{
+					_longRunningThreadsWaitHandle.Set();
+					continue;
+				}
+			}
+
+			// remove the current thread, it has no more jobs to execute
+			_dedicatedThreads.Remove(currentThread);
+
+			// wait for new long-running tasks to be queued
+			// if there's something queued within this period, continue the loop
+			_longRunningThreadsWaitHandle.WaitOne(POOL_THEADS_IDLE_TIMEOUT_MS);
+			if (IsStopped || _jobsQueueLongRunning.IsEmpty)
+				break;
+
+			// check whether this thread is necessary to run the newly queued jobs
+			Thread? addedThread = _dedicatedThreads.AddIf(currentThread, _fnLongRunningThreadAllocatorCondition);
+			if (addedThread != currentThread)
+				break;
+		}
+
+		// reset all queued job statuses to canceled
+		if (IsStopped)
+		{
+			while ((job = _jobsQueueLongRunning.Dequeue()) != null)
+			{
+				UpdateJobStatus(job, JobStatus.Canceled, JobStatus.WaitingForActivation);
+			}
+		}
+
+		// remove current thread once done
+		// Note: it should have been already removed above by _dedicatedThreads.Remove(currentThread);
+		// this is to ensure that none of dead threads is left in the pool if something goes wrong
+		_dedicatedThreads.Remove(currentThread);
 	}
 
-	private void ScheduleThreadProc(Object? param)
+	private void ScheduleThreadProc(Object? unusedParam)
 	{
 		Boolean stopThisThread = false;
 
@@ -465,26 +490,29 @@ public class JobScheduler : JobSchedulerBase
 				continue;
 			}
 
-			// check if there's no job left in the queue
-			_poolThreadsWaitHandle.Reset();
-
-			if (!_jobsQueue.IsEmpty)
+			// Note: We should not reset the wait handle if the scheduled executor is stopped, so it could release the thread ASAP
+			if (!IsStopped)
 			{
-				// verify that resetting the wait handle was correct
-				_poolThreadsWaitHandle.Set();
-				continue;
+				// check if there's no job left in the queue
+				_poolThreadsWaitHandle.Reset();
+
+				if (!_jobsQueue.IsEmpty)
+				{
+					// verify that resetting the wait handle was correct
+					_poolThreadsWaitHandle.Set();
+					continue;
+				}
 			}
 
 			// check if the thread should be stopped
 			if (waitTimedOut)
 				stopThisThread = ReleaseCurrentThreadIfNecessary();
+		}
 
-			if (!_jobsQueue.IsEmpty)
-			{
-				// this will ensure existence of threads in the scheduler to process the left requests
-				if (stopThisThread)
-					AllocateThreadsIfNecessary();
-			}
+		// this will ensure existence of threads in the scheduler to process the left requests
+		if (!_jobsQueue.IsEmpty)
+		{
+			AllocateThreadsIfNecessary();
 		}
 
 		// reset all queued job statuses to canceled
@@ -497,7 +525,9 @@ public class JobScheduler : JobSchedulerBase
 			}
 		}
 
-		// remove current thread once done (if not already removed)
+		// remove current thread once done
+		// Note: it should have been already removed in ReleaseCurrentThreadIfNecessary()
+		// this is to ensure that none of dead threads is left in the pool if something goes wrong
 		_poolThreads.Remove(Thread.CurrentThread);
 	}
 
@@ -655,7 +685,9 @@ public class JobScheduler : JobSchedulerBase
 	}
 	private Boolean LongRunningThreadAllocatorCondition()
 	{
-		return _dedicatedThreads.Count < MaxLongRunningThreads;
+		return !IsStopped &&
+			_dedicatedThreads.Count < MaxLongRunningThreads &&
+			_dedicatedThreads.Count < _jobsQueueLongRunning.Count;
 	}
 
 	#endregion // Runtime delegates
@@ -664,14 +696,17 @@ public class JobScheduler : JobSchedulerBase
 
 	private class JobsQueue
 	{
-		public JobsQueue()
+		public JobsQueue(Int32 maxCount)
 		{
+			_maxCount = maxCount;
+
 			_queue = new PriorityQueue<Job, Int32>();
 			_lock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
 		}
 
-		private PriorityQueue<Job, Int32> _queue;
-		private ReaderWriterLockSlim _lock;
+		private readonly Int32 _maxCount;
+		private readonly PriorityQueue<Job, Int32> _queue;
+		private readonly ReaderWriterLockSlim _lock;
 
 		public Boolean IsEmpty
 		{
@@ -689,21 +724,31 @@ public class JobScheduler : JobSchedulerBase
 				return _queue.Count;
 			}
 		}
-
-		public Job? Dequeue()
+		public Int32 MaxCount
 		{
-			Job? result = null;
-
-			using var wLock = _lock.CreateWLocker();
-			if (!_queue.TryDequeue(out result, out Int32 _))
-				result = null;
-
-			return result;
+			get
+			{
+				return _maxCount;
+			}
 		}
+
 		public void Enqueue(Job job)
 		{
 			using var wLock = _lock.CreateWLocker();
+
+			if (_queue.Count >= _maxCount)
+				throw new OverflowException("Overflow of pending jobs in JobScheduler");
+
 			_queue.Enqueue(job, job.Depth);
+		}
+		public Job? Dequeue()
+		{
+			using var wLock = _lock.CreateWLocker();
+
+			if (_queue.TryDequeue(out Job? result, out Int32 _))
+				return result;
+
+			return null;
 		}
 	}
 

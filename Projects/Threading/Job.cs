@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -375,17 +376,6 @@ public class Job : IAsyncResult, IDisposable
 
 		Run(scheduler);
 	}
-	public void RunSynchronously()
-	{
-		// ensure it will run synchronously
-		_executionOptions |= (Int32)JobCreationOptions.RunSynchronously;
-
-		// will run it instantaneously
-		Run();
-
-		// throw immediately if there's an error
-		ThrowIfCompletedUnexpectedly(true);
-	}
 	public void Run(IJobScheduler jobScheduler)
 	{
 		if (jobScheduler == null)
@@ -456,6 +446,28 @@ public class Job : IAsyncResult, IDisposable
 				Current = prevCurrent;
 			}
 		}
+	}
+	public void RunSynchronously()
+	{
+		// ensure it will run synchronously
+		_executionOptions |= (Int32)JobCreationOptions.RunSynchronously;
+
+		// will run it instantaneously
+		Run();
+
+		// throw immediately if there's an error
+		ThrowIfCompletedUnexpectedly(true);
+	}
+	public void RunSynchronously(IJobScheduler jobScheduler)
+	{
+		// ensure it will run synchronously
+		_executionOptions |= (Int32)JobCreationOptions.RunSynchronously;
+
+		// will run it instantaneously
+		Run(jobScheduler);
+
+		// throw immediately if there's an error
+		ThrowIfCompletedUnexpectedly(true);
 	}
 	public Boolean Cancel()
 	{
@@ -1555,7 +1567,7 @@ public class Job : IAsyncResult, IDisposable
 
 	#region Special Jobs
 
-	// completed tasks
+	// action that never should be invoked
 	private static void ActionNotSetProc()
 	{
 		throw new InvalidOperationException();
@@ -1564,6 +1576,16 @@ public class Job : IAsyncResult, IDisposable
 	protected static Action NoAction
 	{
 		get { return _noAction; }
+	}
+
+	// action that does nothing
+	private static void ActionVoid()
+	{
+	}
+	private static readonly Action _voidAction = new(ActionVoid);
+	protected static Action VoidAction
+	{
+		get { return _voidAction; }
 	}
 
 	public static Job CompletedJob
@@ -1604,6 +1626,25 @@ public class Job : IAsyncResult, IDisposable
 			throw new ArgumentNullException(nameof(exception));
 
 		return new Job<TResult>(exception);
+	}
+
+	// use await Job.Yield() to immediately return from an asynchronous method
+	public static ConfiguredAwaiter Yield()
+	{
+		Job delayJob = new(VoidAction);
+
+		delayJob.Run();
+
+		return delayJob.ConfigureAwait(true);
+	}
+	// use await Job.Yield(scheduler) to immediately return from an asynchronous method
+	public static ConfiguredAwaiter Yield(IJobScheduler jobScheduler)
+	{
+		Job delayJob = new(VoidAction);
+
+		delayJob.Run(jobScheduler);
+
+		return delayJob.ConfigureAwait(true);
 	}
 
 	#endregion // Special Jobs

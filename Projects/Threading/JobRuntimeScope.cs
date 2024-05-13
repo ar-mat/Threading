@@ -72,11 +72,9 @@ public sealed class JobRuntimeScope : IDisposable
 	{
 		// lookup for the scope in the current job's runtime context
 		JobRuntimeScope? scope = Job.Current?.RuntimeContext.GetScope(key);
-		if (scope == null)
-		{
-			// check if the scope is available in the thread runtime context
-			scope = ThreadRuntimeContext.Current?.GetScope(key);
-		}
+
+		// check if the scope is available in the thread runtime context
+		scope ??= ThreadRuntimeContext.Current?.GetScope(key);
 
 		return scope?.Value;
 	}
@@ -106,7 +104,7 @@ public sealed class JobRuntimeScope : IDisposable
 
 // Scope of JobScheduler runtime
 // It ensures to reset IJobScheduler.Current to the previous one when disposed
-public struct JobSchedulerRuntimeScope : IDisposable
+public readonly struct JobSchedulerRuntimeScope : IDisposable
 {
 	internal JobSchedulerRuntimeScope(JobSchedulerBase current, IJobScheduler? previous)
 	{
@@ -134,7 +132,7 @@ public struct JobRuntimeContext
 	}
 	public static JobRuntimeContext Empty { get; } = new();
 
-	public Boolean IsEmpty
+	public readonly Boolean IsEmpty
 	{
 		get { return _currentScopes == null || _currentScopes.Count == 0; }
 	}
@@ -334,7 +332,9 @@ public struct JobMethodBuilderContext : IDisposable
 		{
 			if (_listScopes[i].Key == key)
 			{
+				// remove the one matching by key
 				_listScopes.RemoveAt(i);
+
 				return true;
 			}
 		}
@@ -373,7 +373,7 @@ public struct JobMethodBuilderContext : IDisposable
 
 		JobMethodBuilderContext cxt = _jmbStack.Pop();
 
-		// this will dispose all scopes within this JobMethodbuilderContext
+		// this will dispose all scopes within this JobMethodBuilderContext
 		// note: this object has null scopes (because it's a struct created on a stack), but the cxt read from the _listScopes has all of those
 		cxt.ResetImpl();
 	}
