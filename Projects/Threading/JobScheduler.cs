@@ -6,6 +6,7 @@ using System.Threading;
 using Armat.Utils.Extensions;
 using System.Xml.Serialization;
 using System.Diagnostics.CodeAnalysis;
+using System.Xml.Linq;
 
 namespace Armat.Threading;
 
@@ -13,25 +14,33 @@ namespace Armat.Threading;
 // It performs asynchronous execution of jobs with a dedicated thread pools for regular and long-running jobs respectively
 public class JobScheduler : JobSchedulerBase
 {
-	public JobScheduler() : this(String.Empty, Default.MinThreads, Default.MaxThreads, Default.MaxLongRunningThreads)
+	public JobScheduler(String name)
+		: this(JobSchedulerConfiguration.Default with
+		{
+			Name = name
+		})
 	{
 	}
-	public JobScheduler(String name) : this(name, Default.MinThreads, Default.MaxThreads, Default.MaxLongRunningThreads)
+	public JobScheduler(String name, Int32 maxThreads, Int32 maxLongRunningThreads)
+		: this(JobSchedulerConfiguration.Default with
+		{
+			Name = name,
+			MaxThreads = maxThreads,
+			MaxLongRunningThreads = maxLongRunningThreads
+		})
 	{
 	}
-	public JobScheduler(Int32 maxThreads, Int32 maxLongRunningThreads) : this(String.Empty, 0, maxThreads, maxLongRunningThreads)
-	{
-	}
-	public JobScheduler(String name, Int32 minThreads, Int32 maxThreads, Int32 maxLongRunningThreads)
+	public JobScheduler(JobSchedulerConfiguration config)
 	{
 		InitRuntimeDelegates();
 
-		_minThreadCount = minThreads;
+		// name
+		Name = !String.IsNullOrEmpty(config.Name) ? config.Name : Guid.NewGuid().ToString();
 
-		Name = !String.IsNullOrEmpty(name) ? name : Guid.NewGuid().ToString();
-
-		MaxThreads = maxThreads;
-		MaxLongRunningThreads = maxLongRunningThreads;
+		// min / max threads
+		MaxThreads = config.MaxThreads;
+		MinThreads = config.MinThreads;
+		MaxLongRunningThreads = config.MaxLongRunningThreads;
 
 		_poolThreads = new ConcurrentList<Thread>();
 		_dedicatedThreads = new ConcurrentList<Thread>();
@@ -40,8 +49,8 @@ public class JobScheduler : JobSchedulerBase
 		_poolThreadsWaitHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
 		_longRunningThreadsWaitHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
 
-		_jobsQueue = new JobsQueue(JOBS_QUEUE_UPPER_LIMIT);
-		_jobsQueueLongRunning = new JobsQueue(JOBS_QUEUE_LONG_RUNNING_UPPER_LIMIT);
+		_jobsQueue = new JobsQueue(config.MaxJobsQueueSize);
+		_jobsQueueLongRunning = new JobsQueue(config.MaxLongRunningJobsQueueSize);
 		_jobsInPool = new System.Collections.Concurrent.ConcurrentDictionary<Job, JobStatus>();
 
 		_statsCalculator = new JobSchedulerStatisticsCalculator();
@@ -66,13 +75,10 @@ public class JobScheduler : JobSchedulerBase
 		base.Dispose(disposing);
 	}
 
-	private const String DEFAULT_NAME = "JS"; //"JobScheduler";
 	private const Int32 POOL_THEADS_IDLE_TIMEOUT_MS = 1000;
 	private const Int32 JOB_EXECUTION_WAIT_TIMEOUT_MS = 15000;
-	private const Int32 JOBS_QUEUE_UPPER_LIMIT = 100000;
-	private const Int32 JOBS_QUEUE_LONG_RUNNING_UPPER_LIMIT = 1000;
 
-	private static readonly JobScheduler _default = new(DEFAULT_NAME, 0, Environment.ProcessorCount * 2, Environment.ProcessorCount);
+	private static readonly JobScheduler _default = new(JobSchedulerConfiguration.Default);
 	public static new JobScheduler Default
 	{
 		get => _default;
@@ -125,8 +131,8 @@ public class JobScheduler : JobSchedulerBase
 	private readonly ConcurrentList<Thread> _poolThreads;
 	private readonly ConcurrentList<Thread> _dedicatedThreads;
 	private Int32 _minThreadCount = 0, _maxThreadCount = 0, _maxLRThreadCount = 0;
-	private volatile Boolean _isStopped = false;
 	private readonly Armat.Utils.Counter _threadNameCounter;
+	private volatile Boolean _isStopped = false;
 
 	private readonly EventWaitHandle _poolThreadsWaitHandle;
 	private readonly EventWaitHandle _longRunningThreadsWaitHandle;
@@ -753,4 +759,54 @@ public class JobScheduler : JobSchedulerBase
 	}
 
 	#endregion // Queue of Jobs
+}
+
+public record struct JobSchedulerConfiguration
+{
+	public JobSchedulerConfiguration()
+	{
+		Name = String.Empty;
+
+		MinThreads = 0;
+		MaxThreads = 0;
+		MaxLongRunningThreads = 0;
+
+		MaxJobsQueueSize = 0;
+		MaxLongRunningJobsQueueSize = 0;
+	}
+	public JobSchedulerConfiguration(String name,
+		Int32 minThreads, Int32 maxThreads, Int32 maxLongRunningThreads,
+		Int32 maxJobsQueueSize, Int32 maxLongRunningJobsQueueSize)
+	{
+		Name = name;
+
+		MinThreads = minThreads;
+		MaxThreads = maxThreads;
+		MaxLongRunningThreads = maxLongRunningThreads;
+
+		MaxJobsQueueSize = maxJobsQueueSize;
+		MaxLongRunningJobsQueueSize = maxLongRunningJobsQueueSize;
+	}
+
+	public String Name { get; set; }
+
+	public Int32 MinThreads { get; set; }
+	public Int32 MaxThreads { get; set; }
+	public Int32 MaxLongRunningThreads { get; set; }
+
+	public Int32 MaxJobsQueueSize { get; set; }
+	public Int32 MaxLongRunningJobsQueueSize { get; set; }
+
+	private static readonly JobSchedulerConfiguration _default = new()
+	{
+		Name = "AJS",											// Armat.JobScheduler
+
+		MinThreads = 0,											// It may release all threads
+		MaxThreads = Environment.ProcessorCount * 2,            // It won't run more threads then Environment.ProcessorCount * 2
+		MaxLongRunningThreads = Environment.ProcessorCount,     // It won't run more threads then Environment.ProcessorCount
+
+		MaxJobsQueueSize = 10_000,								// It won't let more queued jobs then 10K
+		MaxLongRunningJobsQueueSize = 1_000						// It won't let more long running queued jobs then 1K
+	};
+	public static JobSchedulerConfiguration Default => _default;
 }

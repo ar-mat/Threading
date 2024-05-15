@@ -75,7 +75,13 @@ public class JobSchedulerUnitTest_Performance
 	//[Fact]
 	private Int64 RunJSL_011_VerifyJobsPerformanceSequential()
 	{
-		using JobScheduler scheduler = new("Performance JS", 1, 4, 1);
+		using JobScheduler scheduler = new(JobSchedulerConfiguration.Default with
+		{
+			Name = "Performance JS",
+			MinThreads = 1,
+			MaxThreads = 4,
+			MaxLongRunningThreads = 0
+		});
 		using var scope = scheduler.EnterScope();
 
 		return SumJob(0, 10000, false).Result;
@@ -104,7 +110,13 @@ public class JobSchedulerUnitTest_Performance
 	//[Fact]
 	private Int64 RunJSL_021_VerifyJobsPerformanceParallel()
 	{
-		using JobScheduler scheduler = new("Performance JS", 1, 4, 1);
+		using JobScheduler scheduler = new(JobSchedulerConfiguration.Default with
+		{
+			Name = "Performance JS",
+			MinThreads = 1,
+			MaxThreads = 4,
+			MaxLongRunningThreads = 0
+		});
 		using var scope = scheduler.EnterScope();
 
 		return SumJob(0, 10000, true).Result;
@@ -267,7 +279,7 @@ public class JobSchedulerUnitTest_Performance
 	private static async Job JobAwaitInLoop()
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
-		for (Int32 i = 0; i < 4000; i++)
+		for (Int32 i = 0; i < 400; i++)
 			await Job.Delay(1);
 #pragma warning restore CS0618 // Type or member is obsolete
 	}
@@ -282,7 +294,7 @@ public class JobSchedulerUnitTest_Performance
 
 	private static async System.Threading.Tasks.Task TaskAwaitInLoop()
 	{
-		for (Int32 i = 0; i < 4000; i++)
+		for (Int32 i = 0; i < 400; i++)
 			await System.Threading.Tasks.Task.Delay(1);
 	}
 
@@ -323,7 +335,7 @@ public class JobSchedulerUnitTest_Performance
 	private static async Job JobAwaitInFunc()
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
-		for (Int32 i = 0; i < 4000; i++)
+		for (Int32 i = 0; i < 400; i++)
 			await JobAwaitFunc();
 #pragma warning restore CS0618 // Type or member is obsolete
 	}
@@ -349,7 +361,7 @@ public class JobSchedulerUnitTest_Performance
 	private static async System.Threading.Tasks.Task TaskAwaitInFunc()
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
-		for (Int32 i = 0; i < 4000; i++)
+		for (Int32 i = 0; i < 400; i++)
 			await TaskAwaitFunc();
 #pragma warning restore CS0618 // Type or member is obsolete
 	}

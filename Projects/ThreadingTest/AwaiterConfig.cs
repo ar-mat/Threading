@@ -227,12 +227,14 @@ public class JobSchedulerUnitTest_AwaiterConfig
 
 		Assert.True(succeeded, "Test with Thread Locals");
 		Assert.True(Math.Abs(_stopWatch.ElapsedMilliseconds - expectedDurationMS) < (expectedDurationMS * expectedDurationErrorPerc) / 100, "Test duration");
+
+		//RunJSL_020_Compare_TPL_vs_JSL_ThreadLocals();
 	}
 
 	//[Fact]
 	private void RunJSL_021_VerifyThreadLocals_Job()
 	{
-		using System.Threading.ManualResetEvent mre = new(false);
+		using ManualResetEvent mre = new(false);
 		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name);
 
 		Output.WriteLine(outputPrefix + "Thread Starting");
@@ -262,11 +264,11 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name);
 
 		// Set thread locals
-		ThreadLocalDataSlotValue = System.Threading.Thread.GetNamedDataSlot("TLS Value");
-		ThreadLocalDataSlotValue ??= System.Threading.Thread.AllocateNamedDataSlot("TLS Value");
+		ThreadLocalDataSlotValue = Thread.GetNamedDataSlot("TLS Value");
+		ThreadLocalDataSlotValue ??= Thread.AllocateNamedDataSlot("TLS Value");
 
 		ThreadStaticString = "Well Initialized";
-		System.Threading.Thread.SetData(ThreadLocalDataSlotValue, "Well Initialized");
+		Thread.SetData(ThreadLocalDataSlotValue, "Well Initialized");
 
 		// call within the same thread context
 		VerifyThreadLocals_DumpToOutput(outputPrefix + "Before Run: ");
@@ -284,6 +286,10 @@ public class JobSchedulerUnitTest_AwaiterConfig
 
 		// call within the same thread context
 		VerifyThreadLocals_DumpToOutput("After Run Null Thread Context: ");
+
+		// reset thread static data
+		Thread.SetData(ThreadLocalDataSlotValue, null);
+		ThreadStaticString = null;
 
 		mre.Set();
 	}
@@ -321,11 +327,11 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		String outputPrefix = Executor.GetLogOutputPrefix(System.Reflection.MethodBase.GetCurrentMethod()!.Name);
 
 		// Set thread locals
-		ThreadLocalDataSlotValue = System.Threading.Thread.GetNamedDataSlot("TLS Value");
-		ThreadLocalDataSlotValue ??= System.Threading.Thread.AllocateNamedDataSlot("TLS Value");
+		ThreadLocalDataSlotValue = Thread.GetNamedDataSlot("TLS Value");
+		ThreadLocalDataSlotValue ??= Thread.AllocateNamedDataSlot("TLS Value");
 
 		ThreadStaticString = "Well Initialized";
-		System.Threading.Thread.SetData(ThreadLocalDataSlotValue, "Well Initialized");
+		Thread.SetData(ThreadLocalDataSlotValue, "Well Initialized");
 
 		// call within the same thread context
 		VerifyThreadLocals_DumpToOutput(outputPrefix + "Before Run: ");
@@ -346,6 +352,10 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		// call within the same thread context
 		VerifyThreadLocals_DumpToOutput("After Run Null Thread Context: ");
 
+		// reset thread static data
+		Thread.SetData(ThreadLocalDataSlotValue, null);
+		ThreadStaticString = null;
+
 		mre.Set();
 	}
 
@@ -355,7 +365,7 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		String outputPrefix = (String)objPrefixString!;
 
 		// test thread locals
-		String? tlsValue = System.Threading.Thread.GetData(ThreadLocalDataSlotValue!) as String;
+		String? tlsValue = Thread.GetData(ThreadLocalDataSlotValue!) as String;
 		String? staticValue = ThreadStaticString;
 		if (String.IsNullOrEmpty(tlsValue))
 			tlsValue = "[None]";

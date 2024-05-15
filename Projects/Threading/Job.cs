@@ -361,7 +361,7 @@ public class Job : IAsyncResult, IDisposable
 		{
 			if ((CreationOptions & JobCreationOptions.HideScheduler) == JobCreationOptions.HideScheduler)
 			{
-				// use teh default scheduler irrespective of the current one
+				// use the default scheduler irrespective of the current one
 				scheduler = IJobScheduler.Default;
 			}
 			else
