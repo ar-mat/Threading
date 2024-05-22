@@ -18,6 +18,6 @@ public interface IJobScheduler : IDisposable
 	void Enqueue(Job job);
 	// cancel the Job
 	Boolean Cancel(Job job);
-	// returns list of pending JObs in the queue
+	// returns list of pending Jobs in the queue
 	Int32 PendingJobsCount { get; }
 }

@@ -75,13 +75,8 @@ public class JobSchedulerUnitTest_Performance
 	//[Fact]
 	private Int64 RunJSL_011_VerifyJobsPerformanceSequential()
 	{
-		using JobScheduler scheduler = new(JobSchedulerConfiguration.Default with
-		{
-			Name = "Performance JS",
-			MinThreads = 1,
-			MaxThreads = 4,
-			MaxLongRunningThreads = 0
-		});
+		using JobScheduler scheduler = new("Performance JS", 4, 0);
+
 		using var scope = scheduler.EnterScope();
 
 		return SumJob(0, 10000, false).Result;
@@ -110,13 +105,8 @@ public class JobSchedulerUnitTest_Performance
 	//[Fact]
 	private Int64 RunJSL_021_VerifyJobsPerformanceParallel()
 	{
-		using JobScheduler scheduler = new(JobSchedulerConfiguration.Default with
-		{
-			Name = "Performance JS",
-			MinThreads = 1,
-			MaxThreads = 4,
-			MaxLongRunningThreads = 0
-		});
+		using JobScheduler scheduler = new("Performance JS", 4, 0);
+
 		using var scope = scheduler.EnterScope();
 
 		return SumJob(0, 10000, true).Result;
