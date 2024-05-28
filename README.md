@@ -76,9 +76,9 @@ The state is defined as an *Object* and may be used to pass arguments to the asy
 - ***Get the result (return value) of a Job upon completion***
 Generic implementations of Job\<TResult\> are running a function with a return value of type *TResult*. The result of a Job becomes available once it's completed successfully.
 
-During execution of a Job, there's a static property `Armat.Threading.Job.Current` to be used for identifying the instance of currently running Job. It's also possible to determine the Job for which the current one is a continuation (see the `Initiator` property of `Job` class). There's also another property `Armat.Threading.Job.Root` to find the upper level Job from which the asynchronous operation has begun.
+During execution of a Job, there's a static property `Armat.Threading.Job.Current` to be used for identifying the instance of currently running Job. It's also possible to determine the Job for which the current one is a continuation (see the `Initiator` property of `Job` class). The property `Armat.Threading.Job.Root` returns the top level Job from which the asynchronous operation has begun.
 
-I'm not going to describe the whole interface of `Armat.Threading.Job` class taking into account that it matches to the `System.Threading.Tasks.Task` in .Net CLR.
+I'm not going to describe the whole interface of `Armat.Threading.Job` class taking into account that it matches to the `System.Threading.Tasks.Task` from .Net CLR.
 
 ## Armat.Threading.JobScheduler class
 
@@ -90,4 +90,102 @@ The class `Armat.Threading.JobScheduler` provides the default implementation of 
 - `Boolean Cancel(Job job)` cancels *Job* execution in the *JobScheduler* before it begins. The method will fail (will return false) if the *Job* is already running or finished.
 - `Int32 PendingJobsCount { get; }` property returns number of jobs currently waiting in the queue. It may be used to monitor the current load on the *JobScheduler*.
 
-It is possible to provide a `JobSchedulerConfiguration` upon instantiation of `Armat.Threading.JobScheduler` class. This allows defining a name for the *JobScheduler* (to be used for naming the threads), limiting number of threads for asynchronous operations, as well as limiting size of the *Job* queues within the scheduler.
+By providing a `JobSchedulerConfiguration` instance upon construction of `Armat.Threading.JobScheduler` class, one may define a name for the *JobScheduler* (to be used for naming the threads), limit number of threads for asynchronous operations, as well as limit size of the *Job* queues within the scheduler.
+
+On top of implementing *IJobScheduler* interface `Armat.Threading.JobScheduler` class also provides properties to retrieve statistics of Jobs queued within the scheduler. See `Statistics` and `MethodBuilderStatistics` properties for more information.
+
+## JobRuntimeScope class
+
+The class represents a scope of an asynchronous operation. It begins at the moment of instantiation of `JobRuntimeScope` object and ends upon its disposal (generally after completing the asynchronous operation). It represents a pair of *Key* and a *Value* that is available through a static accessor during an asynchronous code execution. All nested *Job* invocations derive the *JobRuntimeScope* of the initiator.
+
+Using `JobRuntimeScope` one can deliver any number of parameters to the nested asynchronous methods, thus providing contextual information about the invocation. Some good examples of using `JobRuntimeScope` are:
+
+- identifying correlation of Jobs
+- tracing asynchronous code execution
+- delivering contextual information to the nested methods
+
+Following are members of `Armat.Threading.JobRuntimeScope` class:
+
+- `public static JobRuntimeScope Enter(String key, Func<Object> factory)` instantiates an object of type *JobRuntimeScope* with the given *key* and uses the factory method to initialize the Value property. Note: In case if the *key* already exists in the scope, a `JobRuntimeScope.Null` will be returned.
+- `public static JobRuntimeScope Enter<T>(String key, Func<T> factory)` is an overloaded generic version *JobRuntimeScope.Enter* method.
+- `public static JobRuntimeScope Enter<T>(Func<T> factory)` is an overloaded generic version *JobRuntimeScope.Enter* method which uses T type as a key for creating the scope.
+- `public static JobRuntimeScope EnterNew(String key, Func<Object> factory)` instantiates an object of type *JobRuntimeScope* with the given *key* and uses the factory method to initialize the Value property. Note: In case if the *key* already exists in the scope, a `JobRuntimeScope.Null` will be returned to indicate a failure result.
+- `public static JobRuntimeScope EnterNew<T>(String key, Func<T> factory)` is an overloaded generic version *JobRuntimeScope.EnterNew* method.
+- `public static JobRuntimeScope EnterNew<T>(Func<T> factory)` is an overloaded generic version *JobRuntimeScope.EnterNew* method which T type as a key for creating the scope.
+- `public static Object? GetValue(String key)` returns value for the given key in the current scope. Will return *null* if a scope for the key is not found.
+- `public static T? GetValue<T>(String key)` returns value for the given key in the current scope. Will return *null* if a scope for the key is not found or the *Value* is not assignable to *T*.
+- `public static T? GetValue<T>()` returns value for the T type in the current scope. Will return *null* value if a scope for type *T* is not found or the *Value* is not assignable to *T*.
+- `public void Leave()` leaves the current scope by removing the appropriate key.
+- `public void Dispose()` leaves the current scope as described in *Leave()*. Useful for instantiating scoped to a method objects via *using* statement.
+- `public Boolean IsNull` returns *true* for *NULL* (invalid) scope instances.
+- `public String Key { get; }` property returns the *Key* of *JobRuntimeScope*.
+- `public Object Value { get; }` property returns the *Value* of *JobRuntimeScope*.
+
+Some examples of using JobRuntimeScope are available as unit tests [here](https://github.com/ar-mat/Threading/blob/master/Projects/ThreadingTest/RuntimeScope.cs). Below is another example of the same:
+```cs
+	private async Job DoSomething()
+    {
+        // run some user scoped operation
+        await RunUserScopedOperation().ConfigureAwait(false);
+
+        // user data is null here because the scope has been Disposed before exiting the above method
+        UserData? userData = JobRuntimeScope.GetValue<UserData>();
+    }
+    private async Job RunUserScopedOperation()
+	{
+        // create the scope with some UserData information
+        // 'using' keyword guarantees to have the scope Disposed when exiting the method
+		using var scope = JobRuntimeScope.Enter<UserData>(() => new UserData("abc", "123"));
+
+        // run any asynchronous operation
+        // UserData will be accessible in all inner synchronous or asynchronous methods
+		await AsyncOperationA().ConfigureAwait(false);
+
+        // user data remains the same as above
+		UserData? userData = JobRuntimeScope.GetValue<UserData>();
+	}
+	private async Job AsyncOperationA()
+	{
+        // running some asynchronous operations
+		await Job.Yield();
+
+        // user data remains the same as created in the caller method
+		UserData? userData = JobRuntimeScope.GetValue<UserData>();
+	}
+```
+
+The class `CorrelationIDScope` is one of the possible types to be used as a value for `JobRuntimeScope`. It generates auto-incrementing IDs to be used for correlation across asynchronous operations (for logging, tracing or any other needs). It provides convenient factory methods for instantiating `JobRuntimeScope` with a new `CorrelationIDScope` value as described below:
+```cs
+	private async Job RunCorrelationIDTest(Int32 testNum)
+	{
+        // create correlation ID and teh appropriate scope
+        using var scope = CorrelationIDScope.Create();
+
+        // any asynchronous code execution
+        await Job.Yield();
+
+        // correlation ID is available here
+        Output.WriteLine("RunCorrelationIDTest: Correlation ID for test {0} is {1}",
+            testNum,
+            CorrelationIDScope.Current()!.CorrelationID);
+
+        // nested method calls
+        await NestedAsyncMethodCall(testNum, corrIDHolder.CorrelationID, 1).ConfigureAwait(false);
+	}
+
+	private async Job NestedAsyncMethodCall(Int32 testNum, Int64 expectedCorrID, Int32 depth)
+	{
+        // any asynchronous code execution
+		await Job.Yield();
+
+        // correlation ID remains the same as in the caller method above
+		Output.WriteLine("NestedAsyncMethodCall<{0}>: Correlation ID for test {1} is {2}",
+			depth,
+			testNum,
+			CorrelationIDScope.Current()!.CorrelationID);
+
+        // go even deeper
+		if (depth < 3)
+			await NestedAsyncMethodCall(testNum, expectedCorrID, depth + 1).ConfigureAwait(false);
+	}
+```

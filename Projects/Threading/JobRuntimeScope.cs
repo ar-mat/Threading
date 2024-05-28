@@ -7,65 +7,104 @@ namespace Armat.Threading;
 // represents a Key, Value pair that can be set / get Job execution scope
 public sealed class JobRuntimeScope : IDisposable
 {
-	// enters a scope with a given key
-	// it will keep the returned value from the factory method while executing a code running within the scope
-	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
-	// the value will not be instantiated by the factory it's already running within a scope with same key
-	public static JobRuntimeScope Enter(String key, Func<Object?> factory)
+	private JobRuntimeScope(String key, Object value)
 	{
-		if (key.Length == 0)
-			throw new ArgumentException("JobRuntimeScope key cannot be empty", nameof(key));
-
-		// check if it's already within the scope
-		ThreadRuntimeContext context = ThreadRuntimeContext.GetOrCreateCurrent();
-		if (context.Contains(key))
-			return Null;
-
-		// create the scope
-		JobRuntimeScope scope = new(key, factory())
-		{
-			_capturedContext = context
-		};
-
-		// register the scope
-		if (!context.AddScope(scope))
-			scope._capturedContext = null;
-
-		return scope;
+		Key = key;
+		Value = value;
 	}
-	// enters a scope for a given key
-	// it will keep the returned value from the factory method while executing a code running within the scope
-	// in case the key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
-	// the value will not be instantiated by the factory it's already running within a scope with same key
+	public void Dispose()
+	{
+		Leave();
+	}
+
+	// enters a scope with a given key
+	// Value will be initialized using the given factory() method
+	// it will hold the Value while executing code within the scope
+	// in case the scope key is already used, it will return the existing one
+	public static JobRuntimeScope Enter(String key, Func<Object> factory)
+	{
+		return Create(key, factory, false);
+	}
+	// enters a scope with a given key
+	// Value will be initialized using the given factory() method
+	// it will hold the Value while executing code within the scope
+	// in case the scope key is already used, it will return the existing one
 	public static JobRuntimeScope Enter<T>(String key, Func<T> factory)
 		where T : class
 	{
-		return Enter(key, () => factory());
+		return Enter(key, () => (Object)factory());
 	}
-	// enters a scope for a given T type
-	// it will keep the returned value from the factory method while executing a code running within the scope
-	// in case the T type is already used, it will return JobRuntimeScope.Null and the value won't be constructed
-	// the value will not be instantiated by the factory it's already running within a scope with same T type
+	// enters a scope with a given T type
+	// Value will be initialized using the given factory() method
+	// it will hold the Value while executing code running within the scope
+	// in case the scope key is already used, it will return the existing one
 	public static JobRuntimeScope Enter<T>(Func<T> factory)
 		where T : class
 	{
 		return Enter(typeof(T).FullName!, () => factory());
 	}
+	// tries to enter a new scope with a given key
+	// Value will be initialized using the given factory() method
+	// it will hold the Value while executing code running within the scope
+	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
+	public static JobRuntimeScope EnterNew(String key, Func<Object> factory)
+	{
+		return Create(key, factory, true);
+	}
+	// tries to enter a new scope with a given key
+	// Value will be initialized using the given factory() method
+	// it will hold the Value while executing code within the scope
+	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
+	public static JobRuntimeScope EnterNew<T>(String key, Func<T> factory)
+		where T : class
+	{
+		return EnterNew(key, () => (Object)factory());
+	}
+	// tries to enter a new scope with a given T type
+	// Value will be initialized using the given factory() method
+	// it will hold the Value while executing code running within the scope
+	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
+	public static JobRuntimeScope EnterNew<T>(Func<T> factory)
+		where T : class
+	{
+		return EnterNew(typeof(T).FullName!, () => factory());
+	}
 
-	// returns the scoped value corresponding to the given T type within
-	// the current JobRuntimeContext or ThreadRuntimeContext
-	public static T? GetValue<T>()
-		where T : class
+	private static JobRuntimeScope Create(String key, Func<Object> factory, Boolean createNew)
 	{
-		return GetValue(typeof(T).FullName!) as T;
+		if (key.Length == 0)
+			throw new ArgumentException("JobRuntimeScope key cannot be empty", nameof(key));
+
+		// get or create thread runtime context to store the instance of JobRuntimeScope object
+		ThreadRuntimeContext context = ThreadRuntimeContext.GetOrCreateCurrent();
+
+		// check if it's already within the scope
+		JobRuntimeScope result = context.GetScope(key);
+		if (!result.IsNull)
+		{
+			if (createNew)
+			{
+				// it should always create new scope, thus returning Null as a failure result
+				return Null;
+			}
+
+			// return the existing scope
+			return result;
+		}
+
+		// create the scope
+		result = new(key, factory())
+		{
+			_capturedContext = context
+		};
+
+		// register the scope
+		if (!context.AddScope(result))
+			result._capturedContext = null;
+
+		return result;
 	}
-	// returns the scoped value corresponding to the given key within
-	// the current JobRuntimeContext or ThreadRuntimeContext
-	public static T? GetValue<T>(String key)
-		where T : class
-	{
-		return GetValue(key) as T;
-	}
+
 	// returns the scoped value corresponding to the given key within
 	// the current JobRuntimeContext or ThreadRuntimeContext
 	public static Object? GetValue(String key)
@@ -78,13 +117,22 @@ public sealed class JobRuntimeScope : IDisposable
 
 		return scope?.Value;
 	}
-
-	private JobRuntimeScope(String key, Object? value)
+	// returns the scoped value corresponding to the given key within
+	// the current JobRuntimeContext or ThreadRuntimeContext
+	public static T? GetValue<T>(String key)
+		where T : class
 	{
-		Key = key;
-		Value = value;
+		return GetValue(key) as T;
 	}
-	public void Dispose()
+	// returns the scoped value corresponding to the given T type within
+	// the current JobRuntimeContext or ThreadRuntimeContext
+	public static T? GetValue<T>()
+		where T : class
+	{
+		return GetValue(typeof(T).FullName!) as T;
+	}
+
+	public void Leave()
 	{
 		if (_capturedContext == null)
 			return;
@@ -93,11 +141,11 @@ public sealed class JobRuntimeScope : IDisposable
 		_capturedContext = null;
 	}
 
-	public static readonly JobRuntimeScope Null = new(String.Empty, null);
+	public static readonly JobRuntimeScope Null = new(String.Empty, new Object());
 	public Boolean IsNull => _capturedContext == null;
 
 	public String Key { get; init; }
-	public Object? Value { get; init; }
+	public Object Value { get; init; }
 
 	private ThreadRuntimeContext? _capturedContext = null;
 }
@@ -212,12 +260,12 @@ public class ThreadRuntimeContext
 	{
 		return _currentScopes.ContainsKey(key);
 	}
-	public JobRuntimeScope? GetScope(String key)
+	public JobRuntimeScope GetScope(String key)
 	{
 		if (_currentScopes.TryGetValue(key, out JobRuntimeScope? scope))
 			return scope;
 
-		return null;
+		return JobRuntimeScope.Null;
 	}
 
 	public Boolean AddScope(JobRuntimeScope scope)
