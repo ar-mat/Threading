@@ -80,15 +80,49 @@ During execution of a Job, there's a static property `Armat.Threading.Job.Curren
 
 I'm not going to describe the whole interface of `Armat.Threading.Job` class taking into account that it matches to the `System.Threading.Tasks.Task` from .Net CLR.
 
+Below is a simple example of running an asynchronous operation using jobs:
+
+```cs
+    public Int32 Sum(Int32[] array)
+    {
+        // create the Job
+        Job<Int32> asyncJob = new Job<Int32>(SumFn, array);
+
+        // Run asynchronously
+        asyncJob.Run();
+
+        // wait for it to finish and return the result
+        return asyncJob.Result;
+    }
+
+    private Int32 SumFn(Object? args)
+    {
+        Int32[] array = (Int32[])args;
+
+        return array.Sum();
+    }
+```
+
 ## Armat.Threading.JobScheduler class
 
-The class `Armat.Threading.JobScheduler` provides the default implementation of asynchronous jobs scheduling mechanism declared via `Armat.Threading.IJobScheduler` interface. Beside the instantiation of Job Scheduler, it is recommended to use *IJobScheduler* interface for queueing the jobs. *IJobScheduler* interface defines the following properties and methods:
+The class `Armat.Threading.JobScheduler` derives from `Armat.Threading.JobSchedulerBase` and provides the default implementation of asynchronous jobs scheduling mechanism declared via `Armat.Threading.IJobScheduler` interface. It is recommended to use *IJobScheduler* interface for queueing the jobs. *IJobScheduler* interface defines the following properties and methods:
+
+**Armat.Threading.IJobScheduler interface**
 
 - `static IJobScheduler Default` property returns the default instance of *IJobScheduler*.
-- `static IJobScheduler Current` property returns the instance of *IJobScheduler* running the *Job* on the current thread. This property will return `IJobScheduler Default` if the current thread is not running in a scope of a *Job*.
+- `static IJobScheduler Current` property returns the instance of *IJobScheduler* running the *Job* on the current thread. This property will return `IJobScheduler Default` if the current thread is not running in a scope of a *Job*. See `JobSchedulerBase` for more information about how to change the `Current` job scheduler.
 - `void Enqueue(Job job)` enqueues a *Job* in a scheduler. To successfully enqueue a *Job* in a *JobScheduler* one must have `Job.Status = JobStatus.Created` (never run before).
 - `Boolean Cancel(Job job)` cancels *Job* execution in the *JobScheduler* before it begins. The method will fail (will return false) if the *Job* is already running or finished.
 - `Int32 PendingJobsCount { get; }` property returns number of jobs currently waiting in the queue. It may be used to monitor the current load on the *JobScheduler*.
+
+**Armat.Threading.JobSchedulerBase abstract class**
+
+The class `Armat.Threading.JobSchedulerBase` has methods for changing the `IJobScheduler.Current` property by the following methods:
+
+- `public JobSchedulerRuntimeScope EnterScope()` updates the `IJobScheduler.Current` property to point to the current job scheduler in context of the calling thread.
+- `public void LeaveScope(in JobSchedulerRuntimeScope scope)` restores the `IJobScheduler.Current` property to the previous value (the one before entering the scope). Note that class `JobSchedulerRuntimeScope` implements IDisposable interface, and it automatically calls the *LeaveScope* method upon disposal.
+
+**Armat.Threading.JobScheduler class**
 
 By providing a `JobSchedulerConfiguration` instance upon construction of `Armat.Threading.JobScheduler` class, one may define a name for the *JobScheduler* (to be used for naming the threads), limit number of threads for asynchronous operations, as well as limit size of the *Job* queues within the scheduler.
 
@@ -123,7 +157,7 @@ Following are members of `Armat.Threading.JobRuntimeScope` class:
 
 Some examples of using JobRuntimeScope are available as unit tests [here](https://github.com/ar-mat/Threading/blob/master/Projects/ThreadingTest/RuntimeScope.cs). Below is another example of the same:
 ```cs
-	private async Job DoSomething()
+    private async Job DoSomething()
     {
         // run some user scoped operation
         await RunUserScopedOperation().ConfigureAwait(false);
@@ -132,32 +166,32 @@ Some examples of using JobRuntimeScope are available as unit tests [here](https:
         UserData? userData = JobRuntimeScope.GetValue<UserData>();
     }
     private async Job RunUserScopedOperation()
-	{
+    {
         // create the scope with some UserData information
         // 'using' keyword guarantees to have the scope Disposed when exiting the method
-		using var scope = JobRuntimeScope.Enter<UserData>(() => new UserData("abc", "123"));
+        using var scope = JobRuntimeScope.Enter<UserData>(() => new UserData("abc", "123"));
 
         // run any asynchronous operation
         // UserData will be accessible in all inner synchronous or asynchronous methods
-		await AsyncOperationA().ConfigureAwait(false);
+        await AsyncOperationA().ConfigureAwait(false);
 
         // user data remains the same as above
-		UserData? userData = JobRuntimeScope.GetValue<UserData>();
-	}
-	private async Job AsyncOperationA()
-	{
+        UserData? userData = JobRuntimeScope.GetValue<UserData>();
+    }
+    private async Job AsyncOperationA()
+    {
         // running some asynchronous operations
-		await Job.Yield();
+        await Job.Yield();
 
         // user data remains the same as created in the caller method
-		UserData? userData = JobRuntimeScope.GetValue<UserData>();
-	}
+        UserData? userData = JobRuntimeScope.GetValue<UserData>();
+    }
 ```
 
 The class `CorrelationIDScope` is one of the possible types to be used as a value for `JobRuntimeScope`. It generates auto-incrementing IDs to be used for correlation across asynchronous operations (for logging, tracing or any other needs). It provides convenient factory methods for instantiating `JobRuntimeScope` with a new `CorrelationIDScope` value as described below:
 ```cs
-	private async Job RunCorrelationIDTest(Int32 testNum)
-	{
+    private async Job RunCorrelationIDTest(Int32 testNum)
+    {
         // create correlation ID and teh appropriate scope
         using var scope = CorrelationIDScope.Create();
 
@@ -171,21 +205,26 @@ The class `CorrelationIDScope` is one of the possible types to be used as a valu
 
         // nested method calls
         await NestedAsyncMethodCall(testNum, corrIDHolder.CorrelationID, 1).ConfigureAwait(false);
-	}
+    }
 
-	private async Job NestedAsyncMethodCall(Int32 testNum, Int64 expectedCorrID, Int32 depth)
-	{
+    private async Job NestedAsyncMethodCall(Int32 testNum, Int64 expectedCorrID, Int32 depth)
+    {
         // any asynchronous code execution
-		await Job.Yield();
+        await Job.Yield();
 
         // correlation ID remains the same as in the caller method above
-		Output.WriteLine("NestedAsyncMethodCall<{0}>: Correlation ID for test {1} is {2}",
-			depth,
-			testNum,
-			CorrelationIDScope.Current()!.CorrelationID);
+        Output.WriteLine("NestedAsyncMethodCall<{0}>: Correlation ID for test {1} is {2}",
+            depth,
+            testNum,
+            CorrelationIDScope.Current()!.CorrelationID);
 
         // go even deeper
-		if (depth < 3)
-			await NestedAsyncMethodCall(testNum, expectedCorrID, depth + 1).ConfigureAwait(false);
-	}
+        if (depth < 3)
+            await NestedAsyncMethodCall(testNum, expectedCorrID, depth + 1).ConfigureAwait(false);
+    }
 ```
+
+# Summary
+
+I hope the asynchronous code execution scheduler will inspire you to use it in own projects. I have one, and works quite well fine for me (I'm currently working to publish it for a wider audience).
+I would appreciate any contributions in form of bug reports, improvement ideas or pull requests from the community.
