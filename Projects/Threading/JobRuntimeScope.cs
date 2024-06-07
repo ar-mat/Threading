@@ -95,14 +95,14 @@ public sealed class JobRuntimeScope : IDisposable
 		// create the scope
 		result = new(key, factory())
 		{
-			_isNull = false,
 			_capturedContext = context
 		};
 
 		// register the scope
 		if (!context.AddScope(result))
 		{
-			result._isNull = true;
+			result.Key = Null.Key;
+			result.Value = Null.Value;
 			result._capturedContext = null;
 		}
 
@@ -153,14 +153,13 @@ public sealed class JobRuntimeScope : IDisposable
 		_capturedContext = null;
 	}
 
-	public static readonly JobRuntimeScope Null = new(String.Empty, new Object()) { _isNull = true };
-	public Boolean IsNull => _isNull;
+	public static readonly JobRuntimeScope Null = new(String.Empty, new Object());
+	public Boolean IsNull => Key.Length == 0;
 
-	public String Key { get; init; }
-	public Object Value { get; init; }
+	public String Key { get; private set; }
+	public Object Value { get; private set; }
 
 	private ThreadRuntimeContext? _capturedContext = null;
-	private Boolean _isNull = false;
 }
 
 // Scope of JobScheduler runtime
