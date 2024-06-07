@@ -29,11 +29,20 @@ public abstract class JobSchedulerBase : IJobScheduler
 	}
 
 	// the default IJobScheduler instance
+	private static IJobScheduler? _default = null;
 	public static IJobScheduler Default
 	{
 		get
 		{
-			return JobScheduler.Default;
+			return _default ?? JobScheduler.Default;
+		}
+		protected set
+		{
+			// allow setting default Job Scheduler ONLY once
+			if (_default != null)
+				throw new InvalidOperationException("Default job Scheduler is not allowed to be changed");
+
+			_default = value;
 		}
 	}
 

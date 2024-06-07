@@ -95,12 +95,16 @@ public sealed class JobRuntimeScope : IDisposable
 		// create the scope
 		result = new(key, factory())
 		{
+			_isNull = false,
 			_capturedContext = context
 		};
 
 		// register the scope
 		if (!context.AddScope(result))
+		{
+			result._isNull = true;
 			result._capturedContext = null;
+		}
 
 		return result;
 	}
@@ -112,17 +116,25 @@ public sealed class JobRuntimeScope : IDisposable
 		// lookup for the scope in the current job's runtime context
 		JobRuntimeScope? scope = Job.Current?.RuntimeContext.GetScope(key);
 
+		// if job runtime context is null, then
 		// check if the scope is available in the thread runtime context
 		scope ??= ThreadRuntimeContext.Current?.GetScope(key);
 
-		return scope?.Value;
+		if (scope != null && !scope.IsNull)
+			return scope.Value;
+
+		return null;
 	}
 	// returns the scoped value corresponding to the given key within
 	// the current JobRuntimeContext or ThreadRuntimeContext
 	public static T? GetValue<T>(String key)
 		where T : class
 	{
-		return GetValue(key) as T;
+		Object? value = GetValue(key);
+		if (value == null)
+			return null;
+			
+		return (T)value;
 	}
 	// returns the scoped value corresponding to the given T type within
 	// the current JobRuntimeContext or ThreadRuntimeContext
@@ -141,13 +153,14 @@ public sealed class JobRuntimeScope : IDisposable
 		_capturedContext = null;
 	}
 
-	public static readonly JobRuntimeScope Null = new(String.Empty, new Object());
-	public Boolean IsNull => _capturedContext == null;
+	public static readonly JobRuntimeScope Null = new(String.Empty, new Object()) { _isNull = true };
+	public Boolean IsNull => _isNull;
 
 	public String Key { get; init; }
 	public Object Value { get; init; }
 
 	private ThreadRuntimeContext? _capturedContext = null;
+	private Boolean _isNull = false;
 }
 
 // Scope of JobScheduler runtime
@@ -186,8 +199,12 @@ public struct JobRuntimeContext
 	}
 	public readonly JobRuntimeScope? GetScope(String key)
 	{
-		if (_currentScopes != null && _currentScopes.TryGetValue(key, out JobRuntimeScope? scope))
+		if (_currentScopes != null &&
+			_currentScopes.TryGetValue(key, out JobRuntimeScope? scope) &&
+			!scope.IsNull)
+		{
 			return scope;
+		}
 
 		return null;
 	}
