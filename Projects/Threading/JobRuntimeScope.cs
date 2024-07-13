@@ -162,25 +162,6 @@ public sealed class JobRuntimeScope : IDisposable
 	private ThreadRuntimeContext? _capturedContext = null;
 }
 
-// Scope of JobScheduler runtime
-// It ensures to reset IJobScheduler.Current to the previous one when disposed
-public readonly struct JobSchedulerRuntimeScope : IDisposable
-{
-	internal JobSchedulerRuntimeScope(JobSchedulerBase current, IJobScheduler? previous)
-	{
-		Current = current;
-		Previous = previous;
-	}
-
-	public JobSchedulerBase Current { get; }
-	public IJobScheduler? Previous { get; }
-
-	public void Dispose()
-	{
-		Current.LeaveScope(this);
-	}
-}
-
 // JobRuntimeContext class holds collection of JobRuntimeScope objects within a given Job execution context
 public struct JobRuntimeContext
 {

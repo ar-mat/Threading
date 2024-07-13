@@ -225,14 +225,14 @@ public class JobScheduler : JobSchedulerBase
 		return thread;
 	}
 
-	protected Boolean UpdateJobStatus(Job job, JobStatus newStatus, JobStatus prevStatus)
+	protected new Boolean UpdateJobStatus(Job job, JobStatus newStatus, JobStatus prevStatus)
 	{
 		// this will update the job status only if newStatus != prevStatus
 		// we pass newStatus == prevStatus only in case when the job has completed the execution and 
 		// the only cause we're calling this API is to remove completed jobs from the pool
 		Boolean result = (newStatus == prevStatus);
 		if (!result)
-			result = job.UpdateStatus(newStatus, prevStatus);
+			result = base.UpdateJobStatus(job, newStatus, prevStatus);
 
 		switch (newStatus)
 		{

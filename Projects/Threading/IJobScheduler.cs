@@ -9,10 +9,16 @@ namespace Armat.Threading;
 public interface IJobScheduler : IDisposable
 {
 	// the default IJobScheduler instance
-	static IJobScheduler Default => JobSchedulerBase.Default;
+	static IJobScheduler Default
+	{
+		get => JobSchedulerBase.Default;
+	}
 
 	// the current instance of IJobScheduler to be used for Jobs execution
-	static IJobScheduler Current => JobSchedulerBase.Current;
+	static IJobScheduler Current
+	{
+		get => JobSchedulerScope.Current ?? Default;
+	}
 
 	// enqueue a Job in the scheduler
 	void Enqueue(Job job);
@@ -20,4 +26,5 @@ public interface IJobScheduler : IDisposable
 	Boolean Cancel(Job job);
 	// returns the number of pending Jobs in the queue
 	Int32 PendingJobsCount { get; }
+	JobSchedulerScope EnterScope();
 }

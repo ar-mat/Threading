@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.ConstrainedExecution;
 
 namespace Armat.Threading;
 
@@ -46,36 +47,18 @@ public abstract class JobSchedulerBase : IJobScheduler
 		}
 	}
 
-	[ThreadStatic]
-	private static IJobScheduler? _current;
-	// the current instance of IJobScheduler to be used for Jobs execution
-	public static IJobScheduler Current
-	{
-		get
-		{
-			return _current ?? Default;
-		}
-	}
-	// Enter the scope of current Job Scheduler (Current = this)
-	public JobSchedulerRuntimeScope EnterScope()
-	{
-		JobSchedulerRuntimeScope scope = new(this, _current);
-		_current = scope.Current;
-
-		return scope;
-	}
-	// Leave the scope of current Job Scheduler (Current = [previous])
-	public void LeaveScope(in JobSchedulerRuntimeScope scope)
-	{
-		if (scope.Current != this)
-			throw new ArgumentException("Inconsistent job scheduler", nameof(scope));
-
-		_current = scope.Previous;
-	}
-
 	public abstract void Enqueue(Job job);
 	public abstract Boolean Cancel(Job job);
 	public abstract Int32 PendingJobsCount { get; }
+
+	// the only implementation
+	public JobSchedulerScope EnterScope()
+	{
+		JobSchedulerScope scope = new(this);
+		scope.Enter();
+
+		return scope;
+	}
 
 	// updates the status of Job
 	// can be used in derived scheduler implementations to control Job status (Job.UpdateStatus is internal to this library)
@@ -105,7 +88,7 @@ public abstract class JobSchedulerBase : IJobScheduler
 		// execute main procedure of the job
 		return job.ExecuteProcedure();
 	}
-	// this method must be used when executing jobs in a scheduler
+	// this method must be used when executing job continuations in a scheduler
 	// in sets the IJobScheduler.Current property to this during the job execution
 	// can be used in derived scheduler implementations to control Job status (Job.ExecuteJobContinuations is internal to this library)
 	protected Int32 ExecuteJobContinuations(Job job)
