@@ -147,7 +147,7 @@ public class Job : IAsyncResult, IDisposable
 
 	#region Data Members & Properties
 
-	private const Int32 COMPLTETED_JOB_ID = 0;
+	private const Int64 COMPLTETED_JOB_ID = 0;
 	private static readonly Job _completedJob = new(JobStatus.RanToCompletion);
 
 	[ThreadStatic]
@@ -170,8 +170,8 @@ public class Job : IAsyncResult, IDisposable
 	protected const Int32 JOB_LIGHTWEIGHT_FLAG = 0x0200;
 	protected const Int32 JOB_METHODBUILDERRESULT_FLAG = 0x0400;
 
-	private static Int32 _idCounter = COMPLTETED_JOB_ID;
-	public Int32 Id { get; }
+	private static Int64 _idCounter = COMPLTETED_JOB_ID;
+	public Int64 Id { get; }
 
 	protected Delegate Procedure { get; set; }
 	public Object? AsyncState { get; protected set; }

@@ -77,10 +77,29 @@ public abstract class JobSchedulerBase : IJobScheduler
 	public abstract Boolean Cancel(Job job);
 	public abstract Int32 PendingJobsCount { get; }
 
+	// updates the status of Job
+	// can be used in derived scheduler implementations to control Job status (Job.UpdateStatus is internal to this library)
+	protected Boolean UpdateJobStatus(Job job, JobStatus newStatus, JobStatus prevStatus)
+	{
+		if (newStatus == prevStatus)
+			return true;
+
+		// verify the scheduler
+		if (job.Scheduler != this)
+			throw new InvalidOperationException();
+
+		return job.UpdateStatus(newStatus, prevStatus);
+	}
 	// this method must be used when executing jobs in a scheduler
 	// in sets the IJobScheduler.Current property to this during the job execution
+	// can be used in derived scheduler implementations to control Job status (Job.ExecuteProcedure is internal to this library)
 	protected JobStatus ExecuteJobProcedure(Job job)
 	{
+		// verify the scheduler
+		if (job.Scheduler != this)
+			throw new InvalidOperationException();
+
+		// this will set JobScheduler.Current = this for the current thread
 		using var scope = EnterScope();
 
 		// execute main procedure of the job
@@ -88,8 +107,14 @@ public abstract class JobSchedulerBase : IJobScheduler
 	}
 	// this method must be used when executing jobs in a scheduler
 	// in sets the IJobScheduler.Current property to this during the job execution
+	// can be used in derived scheduler implementations to control Job status (Job.ExecuteJobContinuations is internal to this library)
 	protected Int32 ExecuteJobContinuations(Job job)
 	{
+		// verify the scheduler
+		if (job.Scheduler != this)
+			throw new InvalidOperationException();
+
+		// this will set JobScheduler.Current = this for the current thread
 		using var scope = EnterScope();
 
 		// execute continuations of the job

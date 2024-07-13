@@ -76,7 +76,7 @@ There are several flags in *JobCreationOptions* enumeration which can be used in
 
     - ***JobCreationOptions.RunSynchronously*** instructs *JobScheduler* to run the *Job* within the calling thread. Job run method invocation will not return until the *Job* is finished.
 
-During execution of a *Job*, there's a static property `Armat.Threading.Job.Current` to be used for identifying the instance of currently running *Job*.
+During execution of a *Job*, there's a static property `Armat.Threading.Job.Current` for identifying the instance of currently running *Job*.
 
 There's an `Initiator` property referring to the instance of parent *Job* in context of which this one has been triggered. The property `Armat.Threading.Job.Root` returns the top level Job from which the asynchronous operation has begun.
 
@@ -114,7 +114,7 @@ The class `Armat.Threading.JobScheduler` derives from `Armat.Threading.JobSchedu
 - `static IJobScheduler Default { get; }` static property returns the default instance of *IJobScheduler*.
 - `static IJobScheduler Current` static property returns the instance of *IJobScheduler* which is currently running a *Job* on the caller thread, or the `IJobScheduler.Default` otherwise. See `JobSchedulerBase` for more information about how to change the `Current` job scheduler.
 - `void Enqueue(Job job)` enqueues a *Job* in a scheduler. To successfully enqueue a *Job* in a *JobScheduler* one must have `Job.Status = JobStatus.Created` (never run before).
-- `Boolean Cancel(Job job)` cancels *Job* execution in the *JobScheduler* before it begins. The method will fail (will return false) if the *Job* is already running or finished.
+- `Boolean Cancel(Job job)` cancels *Job* execution in the *JobScheduler* before it begins. The method will fail (will return false) if the *Job* is already running or is finished.
 - `Int32 PendingJobsCount { get; }` property returns number of jobs currently waiting in the queue. It may be used to monitor the current load on the *JobScheduler*.
 
 **Armat.Threading.JobSchedulerBase abstract class**
@@ -130,13 +130,17 @@ The class `Armat.Threading.JobSchedulerBase` provides means for changing the *De
 
 The below example illustrates how to set the *Current* *JobScheduler* within a given scope.
 ```cs
+class AsyncExecutor
+{
+    private JobScheduler _js = null;
+
     private Int64 ImplicitJobExecutionInCustomScheduler()
     {
         // this is the scheduler to be used in scope of the given method
-        using JobScheduler ajs = new("Async Job Scheduler (ajs)");
+        _js ??= new("Async Job Scheduler");
 
-        // After this line all Jobs will be executed by ajs scheduler (unless overridden by another one)
-        // ajs will be disposed when existing the scope, and the previous IJobScheduler.Current will be restored
+        // After this line all Jobs will be executed by _js scheduler (unless overridden by another one)
+        // _js will be disposed when existing the scope, and the previous value of IJobScheduler.Current will be restored
         using var scope = scheduler.EnterScope();
 
         // create the Job
@@ -155,11 +159,12 @@ The below example illustrates how to set the *Current* *JobScheduler* within a g
 
         return array.Sum();
     }
+}
 ```
 
 **Armat.Threading.JobScheduler class**
 
-`Armat.Threading.JobScheduler` is teh default implementation of `Armat.Threading.IJobScheduler` interface.
+`Armat.Threading.JobScheduler` is the default implementation of `Armat.Threading.IJobScheduler` interface.
 It can be constructed with `JobSchedulerConfiguration` argument to provide the name for *JobScheduler* (to be used for naming the threads), limit number of threads for asynchronous operations, as well as limit size of the *Job* queues within the scheduler.
 
 On top of implementing *IJobScheduler* interface `Armat.Threading.JobScheduler` class also provides properties to retrieve statistics of Jobs queued within the scheduler. See `Statistics` and `MethodBuilderStatistics` properties for more information.
