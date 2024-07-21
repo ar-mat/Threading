@@ -8,7 +8,7 @@
 - Support of *async-await* notation for `Job` and `Job<T>` classes (fully compatible with .Net *Tasks*).
 - Simpler and more extensible codebase from the one available in *.Net TPL*. `Armat.Threading` library sources may be used for better understanding asynchronous programming mechanisms in *.Net*, and extend it to fulfill application demands.
 
-The library has been developed to allow creation of multiple independent thread pools in a single *.Net* application, and has been further enhanced to cover more real-life scenarios. It has been designed with performance and flexibility in mind and should produce comparable results with *.Net TPL* (see appropriate performance unit tests). Below are details about the major classes and some usage examples of `Armat.Threading` library.
+The library has been developed to allow creation of multiple independent thread pools in a single *.Net* application, and has been further enhanced to cover more real-life scenarios. It's designed with performance and flexibility in mind and should produce comparable results with *.Net TPL* (see appropriate performance unit tests). Below are details about the major classes and some usage examples of `Armat.Threading` library.
 
 ## Armat.Threading.Job and Armat.Threading.Job\<T\> classes
 
@@ -107,41 +107,27 @@ Below is a simple example of running an asynchronous operation using jobs:
 
 ## Armat.Threading.JobScheduler class
 
-The class `Armat.Threading.JobScheduler` derives from `Armat.Threading.JobSchedulerBase`. It provides the default implementation of asynchronous jobs scheduling mechanism declared by `Armat.Threading.IJobScheduler` interface. It is recommended to use *IJobScheduler* interface for queueing the jobs. Job Scheduler classes are defined as follows:
+The class `Armat.Threading.JobScheduler` derives from `Armat.Threading.JobSchedulerBase`. It provides the default implementation of asynchronous jobs scheduling mechanism declared by `Armat.Threading.IJobScheduler` interface. Job Scheduler interfaces and classes are defined as follows:
 
 **Armat.Threading.IJobScheduler interface**
 
 - `static IJobScheduler Default { get; }` static property returns the default instance of *IJobScheduler*.
-- `static IJobScheduler Current` static property returns the instance of *IJobScheduler* which is currently running a *Job* on the caller thread, or the `IJobScheduler.Default` otherwise. See `JobSchedulerBase` for more information about how to change the `Current` job scheduler.
+- `static IJobScheduler Current` static property returns the instance of *IJobScheduler* which is currently running a *Job* on the caller thread, or the `IJobScheduler.Default` otherwise. 
 - `void Enqueue(Job job)` enqueues a *Job* in a scheduler. To successfully enqueue a *Job* in a *JobScheduler* one must have `Job.Status = JobStatus.Created` (never run before).
 - `Boolean Cancel(Job job)` cancels *Job* execution in the *JobScheduler* before it begins. The method will fail (will return false) if the *Job* is already running or is finished.
 - `Int32 PendingJobsCount { get; }` property returns number of jobs currently waiting in the queue. It may be used to monitor the current load on the *JobScheduler*.
+- `JobSchedulerScope EnterScope()` makes IJobScheduler.Current to refer to this instance the for the executing thread.IJobScheduler.Current is reset to the previous value once the returned JobSchedulerScope is Disposed.
 
-**Armat.Threading.JobSchedulerBase abstract class**
-
-The class `Armat.Threading.JobSchedulerBase` provides means for changing the *Default* and *Current* Job Schedulers as shown below:
-
-- `public static IJobScheduler Default { get; protected set; }` gets or sets the default IJobScheduler. If not set, the `JobScheduler.Default` is returned.
-    - Note: To protect setting the default JobScheduler by an arbitrary code, the setter is made protected, thus requiring a public setter in a derived class.
-    - Note: JobScheduler.Default can be set only once during process lifetime.
-- `public JobSchedulerRuntimeScope EnterScope()` updates the `IJobScheduler.Current` property to point to the current job scheduler in context of the calling thread.
-- `public void LeaveScope(in JobSchedulerRuntimeScope scope)` restores the `IJobScheduler.Current` property to the previous value (the one before entering the scope).
-    - Note: The class `JobSchedulerRuntimeScope` implements IDisposable interface, and it automatically calls the *LeaveScope* method upon disposal.
-
-The below example illustrates how to set the *Current* *JobScheduler* within a given scope.
+The below example illustrates how to replace the *Current* *JobScheduler* within a given scope.
 ```cs
 class AsyncExecutor
 {
-    private JobScheduler _js = null;
-
-    private Int64 ImplicitJobExecutionInCustomScheduler()
+    private Int64 ImplicitJobExecutionInCustomScheduler(IJobScheduler otherScheduler)
     {
-        // this is the scheduler to be used in scope of the given method
-        _js ??= new("Async Job Scheduler");
-
-        // After this line all Jobs will be executed by _js scheduler (unless overridden by another one)
-        // _js will be disposed when existing the scope, and the previous value of IJobScheduler.Current will be restored
-        using var scope = scheduler.EnterScope();
+        // After this line all Jobs will be executed by otherScheduler (unless overridden by another one)
+        // This will make IJobScheduler.Current to refer to the otherScheduler
+        // Disposing the otherScope will result in restoring the previous value of IJobScheduler.Current
+        using var otherScope = scheduler.EnterScope();
 
         // create the Job
         Job<Int32> asyncJob = new Job<Int32>(SumFn, new Int32[] { 1, 2, 3 });
@@ -161,6 +147,17 @@ class AsyncExecutor
     }
 }
 ```
+
+**Armat.Threading.JobSchedulerBase abstract class**
+
+The class `JobSchedulerBase` is designed to be the base class for all `IJobScheduler` implementations. It has protected methods (to be used in derived classes) for triggering execution and updating status of the `Job`.
+
+`Armat.Threading.JobSchedulerBase` also provides means for changing the *Default* Job Scheduler as shown below:
+
+`public static IJobScheduler Default { get; protected set; }` gets or sets the default IJobScheduler. If not set, the `JobScheduler.Default` is returned.
+
+- Note: To protect setting the default JobScheduler by an arbitrary code, the setter is made protected, thus requiring a public setter in a derived class.
+- Note: JobScheduler.Default can be set only once during process lifetime.
 
 **Armat.Threading.JobScheduler class**
 

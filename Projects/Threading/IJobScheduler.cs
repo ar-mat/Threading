@@ -26,5 +26,8 @@ public interface IJobScheduler : IDisposable
 	Boolean Cancel(Job job);
 	// returns the number of pending Jobs in the queue
 	Int32 PendingJobsCount { get; }
+
+	// Makes IJobScheduler.Current to refer to this instance the for the executing thread
+	// IJobScheduler.Current is reset once the resulting JobSchedulerScope is Disposed
 	JobSchedulerScope EnterScope();
 }

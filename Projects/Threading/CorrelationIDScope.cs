@@ -6,49 +6,49 @@ namespace Armat.Threading;
 
 // the class represents a scope for asynchronous execution
 // is auto-generates correlation IDs to be able to trace asynchronous code execution flow
-// a name can be added to CorrelationIDScope object optionally for easier identification
-public class CorrelationIDScope
+// a name can be added to CorrelationIdScope object optionally for easier identification
+public class CorrelationIdScope
 {
-	protected CorrelationIDScope()
+	protected CorrelationIdScope()
 	{
 		Name = String.Empty;
 		CorrelationID = GetNextCorrelationId();
 	}
-	protected CorrelationIDScope(String name)
+	protected CorrelationIdScope(String name)
 	{
 		Name = name;
 		CorrelationID = GetNextCorrelationId();
 	}
 
 	// Key used to create JobRuntimeScope objects
-	public static readonly String JobRuntimeScopeKey = typeof(CorrelationIDScope).FullName!;
+	public static readonly String JobRuntimeScopeKey = typeof(CorrelationIdScope).FullName!;
 
-	// creates a JobRuntimeScope with CorrelationIDScope value
+	// creates a JobRuntimeScope with CorrelationIdScope value
 	public static JobRuntimeScope Create()
 	{
-		return Create(JobRuntimeScopeKey, () => new CorrelationIDScope());
+		return Create(JobRuntimeScopeKey, () => new CorrelationIdScope());
 	}
-	// creates a JobRuntimeScope with named CorrelationIDScope value
+	// creates a JobRuntimeScope with named CorrelationIdScope value
 	public static JobRuntimeScope Create(String name)
 	{
-		return Create(JobRuntimeScopeKey, () => new CorrelationIDScope(name));
+		return Create(JobRuntimeScopeKey, () => new CorrelationIdScope(name));
 	}
 
-	// creates a JobRuntimeScope with the given key and CorrelationIDScope value returned by the factory
+	// creates a JobRuntimeScope with the given key and CorrelationIdScope value returned by the factory
 	// this method can be used by derived classed to create a JobRuntimeScope
-	protected static JobRuntimeScope Create(String runtimeScopeKey, Func<CorrelationIDScope> factory)
+	protected static JobRuntimeScope Create(String runtimeScopeKey, Func<CorrelationIdScope> factory)
 	{
 		return JobRuntimeScope.Enter(runtimeScopeKey, factory);
 	}
 
-	// returns the current CorrelationIDScope if any, or null otherwise
-	public static CorrelationIDScope? Current()
+	// returns the current CorrelationIdScope if any, or null otherwise
+	public static CorrelationIdScope? Current()
 	{
-		return JobRuntimeScope.GetValue<CorrelationIDScope>(JobRuntimeScopeKey);
+		return JobRuntimeScope.GetValue<CorrelationIdScope>(JobRuntimeScopeKey);
 	}
 	public static Int64 CurrentId()
 	{
-		CorrelationIDScope? idScope = Current();
+		CorrelationIdScope? idScope = Current();
 		return idScope == null ? InvalidID : idScope.CorrelationID;
 	}
 

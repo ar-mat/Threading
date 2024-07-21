@@ -78,10 +78,21 @@ public class JobScheduler : JobSchedulerBase
 	private const Int32 POOL_THEADS_IDLE_TIMEOUT_MS = 1000;
 	private const Int32 JOB_EXECUTION_WAIT_TIMEOUT_MS = 15000;
 
-	private static readonly JobScheduler _default = new(JobSchedulerConfiguration.Default);
-	public static new JobScheduler Default
+	// the one JobScheduler with default configuration
+	// it will be used as IJobScheduler.default unless the SetAsDefault is called
+	private static readonly JobScheduler _withDefaultConfig = new(JobSchedulerConfiguration.Default);
+	public static JobScheduler WithDefaultConfiguration
 	{
-		get => _default;
+		get => _withDefaultConfig;
+	}
+
+	// will set the current JobScheduler as Default
+	// throws InvalidOperationException in case the default is set
+	// it is recommended to set the Default JobScheduler wigth after starting the appliaction
+	//   so that no other code within it could accidentally replace the IJobScheduler.Default
+	public void SetAsDefault()
+	{
+		JobSchedulerBase.Default = this;
 	}
 
 	public String Name { get; }
@@ -799,7 +810,7 @@ public record struct JobSchedulerConfiguration
 
 	private static readonly JobSchedulerConfiguration _default = new()
 	{
-		Name = "AJS",											// Armat.JobScheduler
+		Name = "Default",										// Armat.JobScheduler
 
 		MinThreads = 0,											// It may release all threads
 		MaxThreads = Environment.ProcessorCount * 2,            // It won't run more threads then Environment.ProcessorCount * 2

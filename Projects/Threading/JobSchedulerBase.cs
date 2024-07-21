@@ -35,7 +35,7 @@ public abstract class JobSchedulerBase : IJobScheduler
 	{
 		get
 		{
-			return _default ?? JobScheduler.Default;
+			return _default ?? JobScheduler.WithDefaultConfiguration;
 		}
 		protected set
 		{

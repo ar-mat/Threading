@@ -96,42 +96,42 @@ public class JobSchedulerUnitTest_RuntimeScope
 
 		Output.WriteLine("End test");
 
-		Assert.True(CorrelationIDScope.Current() == null);
+		Assert.True(CorrelationIdScope.Current() == null);
 	}
 
 	private async Job RunCorrelationIDTest(Int32 testNum)
 	{
 		{
-			using var scope = CorrelationIDScope.Create();
-			CorrelationIDScope? corrIDHolder = CorrelationIDScope.Current();
+			using var scope = CorrelationIdScope.Create();
+			CorrelationIdScope? corrIDHolder = CorrelationIdScope.Current();
 			Assert.True(corrIDHolder != null);
 
 			await Job.Yield();
 
-			Assert.True(CorrelationIDScope.Current()!.CorrelationID == corrIDHolder.CorrelationID);
+			Assert.True(CorrelationIdScope.Current()!.CorrelationID == corrIDHolder.CorrelationID);
 			Output.WriteLine("RunCorrelationIDTest: Correlation ID for test {0} is {1}",
 				testNum,
-				CorrelationIDScope.Current()!.CorrelationID);
+				CorrelationIdScope.Current()!.CorrelationID);
 
 			await NestedAsyncMethodCall(testNum, corrIDHolder.CorrelationID, 1).ConfigureAwait(false);
-			Assert.True(CorrelationIDScope.Current()!.CorrelationID == corrIDHolder.CorrelationID);
+			Assert.True(CorrelationIdScope.Current()!.CorrelationID == corrIDHolder.CorrelationID);
 		}
 
-		Assert.True(CorrelationIDScope.Current() == null);
+		Assert.True(CorrelationIdScope.Current() == null);
 	}
 
 	private async Job NestedAsyncMethodCall(Int32 testNum, Int64 expectedCorrID, Int32 depth)
 	{
 		await Job.Yield();
 
-		Assert.True(CorrelationIDScope.Current()!.CorrelationID == expectedCorrID);
+		Assert.True(CorrelationIdScope.Current()!.CorrelationID == expectedCorrID);
 		Output.WriteLine("NestedAsyncMethodCall<{0}>: Correlation ID for test {1} is {2}",
 			depth,
 			testNum,
-			CorrelationIDScope.Current()!.CorrelationID);
+			CorrelationIdScope.Current()!.CorrelationID);
 
 		await Job.Yield();
-		Assert.True(CorrelationIDScope.Current()!.CorrelationID == expectedCorrID);
+		Assert.True(CorrelationIdScope.Current()!.CorrelationID == expectedCorrID);
 
 		if (depth < 3)
 			await NestedAsyncMethodCall(testNum, expectedCorrID, depth + 1).ConfigureAwait(false);

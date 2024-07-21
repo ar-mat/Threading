@@ -232,14 +232,14 @@ Following are members of `Armat.Threading.JobRuntimeScope` class:
 - `public String Key { get; }` property returns the *Key* of *JobRuntimeScope*.
 - `public Object Value { get; }` property returns the *Value* of *JobRuntimeScope*.
 
-**CorrelationIDScope class**
+**CorrelationIdScope class**
 
-The class `CorrelationIDScope` is one of possible value types for `JobRuntimeScope`. It generates auto-incrementing IDs to be used for correlation across asynchronous operations (for logging, tracing or any other needs). It provides convenient factory methods for instantiating `JobRuntimeScope` with a new `CorrelationIDScope` value as shown below:
+The class `CorrelationIdScope` is one of possible value types for `JobRuntimeScope`. It generates auto-incrementing IDs to be used for correlation across asynchronous operations (for logging, tracing or any other needs). It provides convenient factory methods for instantiating `JobRuntimeScope` with a new `CorrelationIdScope` value as shown below:
 ```cs
     private async Job RunCorrelationIDTest(Int32 testNum)
     {
         // create correlation ID and the appropriate scope
-        using var scope = CorrelationIDScope.Create();
+        using var scope = CorrelationIdScope.Create();
 
         // any asynchronous code execution
         await Job.Yield();
@@ -247,10 +247,10 @@ The class `CorrelationIDScope` is one of possible value types for `JobRuntimeSco
         // correlation ID is available here
         Output.WriteLine("RunCorrelationIDTest: Correlation ID for test {0} is {1}",
             testNum,
-            CorrelationIDScope.Current()!.CorrelationID);
+            CorrelationIdScope.Current()!.CorrelationID);
 
         // nested method calls
-        await NestedAsyncMethodCall(testNum, CorrelationIDScope.Current()!.CorrelationID, 1).ConfigureAwait(false);
+        await NestedAsyncMethodCall(testNum, CorrelationIdScope.Current()!.CorrelationID, 1).ConfigureAwait(false);
     }
 
     private async Job NestedAsyncMethodCall(Int32 testNum, Int64 expectedCorrID, Int32 depth)
@@ -262,7 +262,7 @@ The class `CorrelationIDScope` is one of possible value types for `JobRuntimeSco
         Output.WriteLine("NestedAsyncMethodCall<{0}>: Correlation ID for test {1} is {2}",
             depth,
             testNum,
-            CorrelationIDScope.Current()!.CorrelationID);
+            CorrelationIdScope.Current()!.CorrelationID);
 
         // go even deeper
         if (depth < 3)
@@ -275,3 +275,4 @@ Appropriate test is available [here](https://github.com/ar-mat/Threading/blob/ma
 
 I hope the asynchronous code execution scheduler will inspire you to use it in own projects. I have one, and works quite well for me (I'm currently working to publish it for a wider audience).
 I would appreciate any contributions in form of bug reports, improvement ideas or pull requests from the community.
+You may find more information in my CodeProject article [here](https://www.codeproject.com/Articles/5383493/Powerful-Alternative-to-Net-TPL).
