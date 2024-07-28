@@ -8,7 +8,7 @@
 - Support of *async-await* notation for `Job` and `Job<T>` classes (fully compatible with .Net *Tasks*).
 - Simpler and more extensible codebase from the one available in *.Net TPL*. `Armat.Threading` library sources may be used for better understanding asynchronous programming mechanisms in *.Net*, and extend it to fulfill application demands.
 
-The library has been developed to allow creation of multiple independent thread pools in a single *.Net* application, and has been further enhanced to cover more real-life scenarios. It's designed with performance and flexibility in mind and should produce comparable results with *.Net TPL* (see appropriate performance unit tests). Below are details about the major classes and some usage examples of `Armat.Threading` library.
+The library has been developed to allow creation of multiple independent thread pools in a single *.Net* application, and has been further enhanced to cover more real-life scenarios. It has been designed with performance and flexibility in mind and should produce comparable results with *.Net TPL* (see appropriate performance unit tests). Below are details about the major classes and some usage examples of `Armat.Threading` library.
 
 ## Armat.Threading.Job and Armat.Threading.Job\<T\> classes
 
@@ -76,7 +76,7 @@ There are several flags in *JobCreationOptions* enumeration which can be used in
 
     - ***JobCreationOptions.RunSynchronously*** instructs *JobScheduler* to run the *Job* within the calling thread. Job run method invocation will not return until the *Job* is finished.
 
-During execution of a *Job*, there's a static property `Armat.Threading.Job.Current` for identifying the instance of currently running *Job*.
+During execution of a *Job*, there's a static property `Armat.Threading.Job.Current` to be used for identifying the instance of currently running *Job*.
 
 There's an `Initiator` property referring to the instance of parent *Job* in context of which this one has been triggered. The property `Armat.Threading.Job.Root` returns the top level Job from which the asynchronous operation has begun.
 
@@ -107,27 +107,37 @@ Below is a simple example of running an asynchronous operation using jobs:
 
 ## Armat.Threading.JobScheduler class
 
-The class `Armat.Threading.JobScheduler` derives from `Armat.Threading.JobSchedulerBase`. It provides the default implementation of asynchronous jobs scheduling mechanism declared by `Armat.Threading.IJobScheduler` interface. Job Scheduler interfaces and classes are defined as follows:
+The class `Armat.Threading.JobScheduler` derives from `Armat.Threading.JobSchedulerBase`. It provides the default implementation of asynchronous jobs scheduling mechanism declared by `Armat.Threading.IJobScheduler` interface. It is recommended to use *IJobScheduler* interface for queueing the jobs. Job Scheduler classes are defined as follows:
 
 **Armat.Threading.IJobScheduler interface**
 
 - `static IJobScheduler Default { get; }` static property returns the default instance of *IJobScheduler*.
-- `static IJobScheduler Current` static property returns the instance of *IJobScheduler* which is currently running a *Job* on the caller thread, or the `IJobScheduler.Default` otherwise. 
+- `static IJobScheduler Current` static property returns the instance of *IJobScheduler* which is currently running a *Job* on the caller thread, or the `IJobScheduler.Default` otherwise. See `JobSchedulerBase` for more information about how to change the `Current` job scheduler.
 - `void Enqueue(Job job)` enqueues a *Job* in a scheduler. To successfully enqueue a *Job* in a *JobScheduler* one must have `Job.Status = JobStatus.Created` (never run before).
-- `Boolean Cancel(Job job)` cancels *Job* execution in the *JobScheduler* before it begins. The method will fail (will return false) if the *Job* is already running or is finished.
+- `Boolean Cancel(Job job)` cancels *Job* execution in the *JobScheduler* before it begins. The method will fail (will return false) if the *Job* is already running or finished.
 - `Int32 PendingJobsCount { get; }` property returns number of jobs currently waiting in the queue. It may be used to monitor the current load on the *JobScheduler*.
-- `JobSchedulerScope EnterScope()` makes IJobScheduler.Current to refer to this instance the for the executing thread.IJobScheduler.Current is reset to the previous value once the returned JobSchedulerScope is Disposed.
 
-The below example illustrates how to replace the *Current* *JobScheduler* within a given scope.
+**Armat.Threading.JobSchedulerBase abstract class**
+
+The class `Armat.Threading.JobSchedulerBase` provides means for changing the *Default* and *Current* Job Schedulers as shown below:
+
+- `public static IJobScheduler Default { get; protected set; }` gets or sets the default IJobScheduler. If not set, the `JobScheduler.Default` is returned.
+    - Note: To protect setting the default JobScheduler by an arbitrary code, the setter is made protected, thus requiring a public setter in a derived class.
+    - Note: JobScheduler.Default can be set only once during process lifetime.
+- `public JobSchedulerRuntimeScope EnterScope()` updates the `IJobScheduler.Current` property to point to the current job scheduler in context of the calling thread.
+- `public void LeaveScope(in JobSchedulerRuntimeScope scope)` restores the `IJobScheduler.Current` property to the previous value (the one before entering the scope).
+    - Note: The class `JobSchedulerRuntimeScope` implements IDisposable interface, and it automatically calls the *LeaveScope* method upon disposal.
+
+The below example illustrates how to set the *Current* *JobScheduler* within a given scope.
 ```cs
-class AsyncExecutor
-{
-    private Int64 ImplicitJobExecutionInCustomScheduler(IJobScheduler otherScheduler)
+    private Int64 ImplicitJobExecutionInCustomScheduler()
     {
-        // After this line all Jobs will be executed by otherScheduler (unless overridden by another one)
-        // This will make IJobScheduler.Current to refer to the otherScheduler
-        // Disposing the otherScope will result in restoring the previous value of IJobScheduler.Current
-        using var otherScope = scheduler.EnterScope();
+        // this is the scheduler to be used in scope of the given method
+        using JobScheduler ajs = new("Async Job Scheduler (ajs)");
+
+        // After this line all Jobs will be executed by ajs scheduler (unless overridden by another one)
+        // ajs will be disposed when existing the scope, and the previous IJobScheduler.Current will be restored
+        using var scope = scheduler.EnterScope();
 
         // create the Job
         Job<Int32> asyncJob = new Job<Int32>(SumFn, new Int32[] { 1, 2, 3 });
@@ -145,23 +155,11 @@ class AsyncExecutor
 
         return array.Sum();
     }
-}
 ```
-
-**Armat.Threading.JobSchedulerBase abstract class**
-
-The class `JobSchedulerBase` is designed to be the base class for all `IJobScheduler` implementations. It has protected methods (to be used in derived classes) for triggering execution and updating status of the `Job`.
-
-`Armat.Threading.JobSchedulerBase` also provides means for changing the *Default* Job Scheduler as shown below:
-
-`public static IJobScheduler Default { get; protected set; }` gets or sets the default IJobScheduler. If not set, the `JobScheduler.Default` is returned.
-
-- Note: To protect setting the default JobScheduler by an arbitrary code, the setter is made protected, thus requiring a public setter in a derived class.
-- Note: JobScheduler.Default can be set only once during process lifetime.
 
 **Armat.Threading.JobScheduler class**
 
-`Armat.Threading.JobScheduler` is the default implementation of `Armat.Threading.IJobScheduler` interface.
+`Armat.Threading.JobScheduler` is teh default implementation of `Armat.Threading.IJobScheduler` interface.
 It can be constructed with `JobSchedulerConfiguration` argument to provide the name for *JobScheduler* (to be used for naming the threads), limit number of threads for asynchronous operations, as well as limit size of the *Job* queues within the scheduler.
 
 On top of implementing *IJobScheduler* interface `Armat.Threading.JobScheduler` class also provides properties to retrieve statistics of Jobs queued within the scheduler. See `Statistics` and `MethodBuilderStatistics` properties for more information.
@@ -234,14 +232,14 @@ Following are members of `Armat.Threading.JobRuntimeScope` class:
 - `public String Key { get; }` property returns the *Key* of *JobRuntimeScope*.
 - `public Object Value { get; }` property returns the *Value* of *JobRuntimeScope*.
 
-**CorrelationIDScope class**
+**CorrelationIdScope class**
 
-The class `CorrelationIDScope` is one of possible value types for `JobRuntimeScope`. It generates auto-incrementing IDs to be used for correlation across asynchronous operations (for logging, tracing or any other needs). It provides convenient factory methods for instantiating `JobRuntimeScope` with a new `CorrelationIDScope` value as shown below:
+The class `CorrelationIdScope` is one of possible value types for `JobRuntimeScope`. It generates auto-incrementing IDs to be used for correlation across asynchronous operations (for logging, tracing or any other needs). It provides convenient factory methods for instantiating `JobRuntimeScope` with a new `CorrelationIdScope` value as shown below:
 ```cs
     private async Job RunCorrelationIDTest(Int32 testNum)
     {
         // create correlation ID and the appropriate scope
-        using var scope = CorrelationIDScope.Create();
+        using var scope = CorrelationIdScope.Create();
 
         // any asynchronous code execution
         await Job.Yield();
@@ -249,10 +247,10 @@ The class `CorrelationIDScope` is one of possible value types for `JobRuntimeSco
         // correlation ID is available here
         Output.WriteLine("RunCorrelationIDTest: Correlation ID for test {0} is {1}",
             testNum,
-            CorrelationIDScope.Current()!.CorrelationID);
+            CorrelationIdScope.Current()!.CorrelationID);
 
         // nested method calls
-        await NestedAsyncMethodCall(testNum, CorrelationIDScope.Current()!.CorrelationID, 1).ConfigureAwait(false);
+        await NestedAsyncMethodCall(testNum, CorrelationIdScope.Current()!.CorrelationID, 1).ConfigureAwait(false);
     }
 
     private async Job NestedAsyncMethodCall(Int32 testNum, Int64 expectedCorrID, Int32 depth)
@@ -264,7 +262,7 @@ The class `CorrelationIDScope` is one of possible value types for `JobRuntimeSco
         Output.WriteLine("NestedAsyncMethodCall<{0}>: Correlation ID for test {1} is {2}",
             depth,
             testNum,
-            CorrelationIDScope.Current()!.CorrelationID);
+            CorrelationIdScope.Current()!.CorrelationID);
 
         // go even deeper
         if (depth < 3)
@@ -277,3 +275,4 @@ Appropriate test is available [here](https://github.com/ar-mat/Threading/blob/ma
 
 I hope the asynchronous code execution scheduler will inspire you to use it in own projects. I have one, and works quite well for me (I'm currently working to publish it for a wider audience).
 I would appreciate any contributions in form of bug reports, improvement ideas or pull requests from the community.
+You may find more information in my CodeProject article [here](https://www.codeproject.com/Articles/5383493/Powerful-Alternative-to-Net-TPL).
