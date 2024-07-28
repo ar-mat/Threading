@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 
@@ -9,7 +9,7 @@
 		<RootNamespace>Armat.Threading</RootNamespace>
 		<AssemblyName>armat.threading</AssemblyName>
 
-		<Version>1.0.1</Version>
+		<Version>1.0.2</Version>
 		<AssemblyVersion>$(Version).0</AssemblyVersion>
 		<FileVersion>$(Version).0</FileVersion>
 		<!--<_NugetVersionPostfix>-beta</_NugetVersionPostfix>-->
