@@ -165,11 +165,10 @@ public sealed class JobRuntimeScope : IDisposable
 // JobRuntimeContext class holds collection of JobRuntimeScope objects within a given Job execution context
 public struct JobRuntimeContext
 {
-	private Dictionary<String, JobRuntimeScope> _currentScopes;
+	private Dictionary<String, JobRuntimeScope>? _currentScopes = null;
 
 	public JobRuntimeContext()
 	{
-		_currentScopes = new Dictionary<String, JobRuntimeScope>();
 	}
 	public static JobRuntimeContext Empty { get; } = new();
 
@@ -198,10 +197,10 @@ public struct JobRuntimeContext
 		if (currentThreadContext == null)
 			return 0;
 
-		IReadOnlyCollection<JobRuntimeScope> currentThreadScopes = currentThreadContext.Scopes;
+		IReadOnlyCollection<JobRuntimeScope>? currentThreadScopes = currentThreadContext.Scopes;
 		Int32 result = 0;
 
-		if (currentThreadScopes.Count > 0)
+		if (currentThreadScopes != null && currentThreadScopes.Count > 0)
 		{
 			foreach (JobRuntimeScope scope in currentThreadScopes)
 			{
@@ -237,29 +236,28 @@ public struct JobRuntimeContext
 // There's a unique ThreadRuntimeContext instance per each thread
 public class ThreadRuntimeContext
 {
-	private Dictionary<String, JobRuntimeScope> _currentScopes;
+	private Dictionary<String, JobRuntimeScope>? _currentScopes = null;
 
 	private ThreadRuntimeContext()
 	{
-		_currentScopes = new Dictionary<String, JobRuntimeScope>();
 	}
 
 	public Boolean IsEmpty
 	{
-		get { return _currentScopes.Count == 0; }
+		get { return _currentScopes == null || _currentScopes.Count == 0; }
 	}
-	public IReadOnlyCollection<JobRuntimeScope> Scopes
+	public IReadOnlyCollection<JobRuntimeScope>? Scopes
 	{
-		get { return _currentScopes.Values; }
+		get { return _currentScopes?.Values; }
 	}
 
 	public Boolean Contains(String key)
 	{
-		return _currentScopes.ContainsKey(key);
+		return _currentScopes != null && _currentScopes.ContainsKey(key);
 	}
 	public JobRuntimeScope GetScope(String key)
 	{
-		if (_currentScopes.TryGetValue(key, out JobRuntimeScope? scope))
+		if (_currentScopes != null && _currentScopes.TryGetValue(key, out JobRuntimeScope? scope))
 			return scope;
 
 		return JobRuntimeScope.Null;
@@ -271,21 +269,19 @@ public class ThreadRuntimeContext
 			throw new ArgumentException("JobRuntimeScope.Enter failed", nameof(scope));
 
 		_currentScopes ??= new Dictionary<String, JobRuntimeScope>();
-
 		_currentScopes.Add(scope.Key, scope);
+
 		JobMethodBuilderContext.AddScope(scope);
 
 		return true;
 	}
 	public Boolean RemoveScope(String key)
 	{
-		if (_currentScopes == null)
-			return false;
-
-		if (!_currentScopes.Remove(key))
+		if (_currentScopes == null || !_currentScopes.Remove(key))
 			return false;
 
 		JobMethodBuilderContext.RemoveScope(key);
+
 		return true;
 	}
 
@@ -367,6 +363,7 @@ public struct JobMethodBuilderContext : IDisposable
 
 		return true;
 	}
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0251:Make member 'readonly'", Justification = "<Pending>")]
 	private Boolean RemoveImpl(String key)
 	{
 		if (_listScopes == null)
@@ -408,6 +405,7 @@ public struct JobMethodBuilderContext : IDisposable
 			scopes[i].Dispose();
 	}
 
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0251:Make member 'readonly'", Justification = "<Pending>")]
 	public void Dispose()
 	{
 		if (_jmbStack == null || _jmbStack.Count == 0)
