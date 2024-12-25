@@ -48,11 +48,20 @@
 
 	</PropertyGroup>
 
-	<ItemGroup>
-
+	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
 		<PackageReference Include="armat.utils" Version="1.0.0" />
-
 	</ItemGroup>
+
+	<!-- Begin: Simplify the development by including the locally built version of the dependency modules-->
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<ArmatRepoRoot>D:/Sources/GitHub</ArmatRepoRoot>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<Reference Include="armat.utils">
+			<HintPath>$(ArmatRepoRoot)/Utilities/bin/$(Configuration)/armat.utils.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+	<!-- End: Simplify the development by including the locally built version of the dependency modules-->
 
 	<ItemGroup>
 		<None Update="AppIcon.png">
