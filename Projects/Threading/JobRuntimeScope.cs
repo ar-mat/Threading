@@ -23,7 +23,7 @@ public sealed class JobRuntimeScope : IDisposable
 	// in case the scope key is already used, it will return the existing one
 	public static JobRuntimeScope Enter(String key, Func<Object> factory)
 	{
-		return Create(key, factory, false);
+		return Create(key, factory);
 	}
 	// enters a scope with a given key
 	// Value will be initialized using the given factory() method
@@ -32,7 +32,7 @@ public sealed class JobRuntimeScope : IDisposable
 	public static JobRuntimeScope Enter<T>(String key, Func<T> factory)
 		where T : class
 	{
-		return Enter(key, () => (Object)factory());
+		return Create(key, () => (Object)factory());
 	}
 	// enters a scope with a given T type
 	// Value will be initialized using the given factory() method
@@ -41,36 +41,10 @@ public sealed class JobRuntimeScope : IDisposable
 	public static JobRuntimeScope Enter<T>(Func<T> factory)
 		where T : class
 	{
-		return Enter(typeof(T).FullName!, () => factory());
-	}
-	// tries to enter a new scope with a given key
-	// Value will be initialized using the given factory() method
-	// it will hold the Value while executing code running within the scope
-	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
-	public static JobRuntimeScope EnterNew(String key, Func<Object> factory)
-	{
-		return Create(key, factory, true);
-	}
-	// tries to enter a new scope with a given key
-	// Value will be initialized using the given factory() method
-	// it will hold the Value while executing code within the scope
-	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
-	public static JobRuntimeScope EnterNew<T>(String key, Func<T> factory)
-		where T : class
-	{
-		return EnterNew(key, () => (Object)factory());
-	}
-	// tries to enter a new scope with a given T type
-	// Value will be initialized using the given factory() method
-	// it will hold the Value while executing code running within the scope
-	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
-	public static JobRuntimeScope EnterNew<T>(Func<T> factory)
-		where T : class
-	{
-		return EnterNew(typeof(T).FullName!, () => factory());
+		return Create(typeof(T).FullName!, () => factory());
 	}
 
-	private static JobRuntimeScope Create(String key, Func<Object> factory, Boolean createNew)
+	private static JobRuntimeScope Create(String key, Func<Object> factory)
 	{
 		if (key.Length == 0)
 			throw new ArgumentException("JobRuntimeScope key cannot be empty", nameof(key));
@@ -82,14 +56,10 @@ public sealed class JobRuntimeScope : IDisposable
 		JobRuntimeScope result = context.GetScope(key);
 		if (!result.IsNull)
 		{
-			if (createNew)
-			{
-				// it should always create new scope, thus returning Null as a failure result
-				return Null;
-			}
-
-			// return the existing scope
-			return result;
+			// it should always create new scope, thus returning Null as a failure result
+			// returning the existing scope would lead the following bug:
+			// In case of a reentrant method, the same scope would be disposed when exiting the nested method
+			return Null;
 		}
 
 		// create the scope
