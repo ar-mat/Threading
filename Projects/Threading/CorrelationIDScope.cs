@@ -7,7 +7,7 @@ namespace Armat.Threading;
 // the class represents a scope for asynchronous execution
 // it auto-generates correlation IDs to be able to trace asynchronous code execution flow
 // a name can be added to CorrelationIdScope object optionally for easier identification
-// the generic T type may be used to define separate intersecting CorrelationIDScope objects
+// the generic T type may be used to define separate independent CorrelationIDScope objects
 public class CorrelationIdScope<T>
 {
 	protected CorrelationIdScope()
@@ -70,7 +70,7 @@ public class CorrelationIdScope<T>
 
 	// Correlation ID generator
 	public const Int64 InvalidID = 0;
-	private static readonly Utils.Counter _correlationIdCounter = new(InvalidID);
+	private static Utils.Counter _correlationIdCounter = new(InvalidID);
 	private static Int64 GetNextCorrelationId()
 	{
 		return _correlationIdCounter.Increment();
