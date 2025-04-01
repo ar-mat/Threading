@@ -9,14 +9,14 @@
 		<RootNamespace>Armat.Threading</RootNamespace>
 		<AssemblyName>armat.threading</AssemblyName>
 
-		<Version>1.0.2</Version>
+		<Version>2.0.0</Version>
 		<AssemblyVersion>$(Version).0</AssemblyVersion>
 		<FileVersion>$(Version).0</FileVersion>
 		<!--<_NugetVersionPostfix>-beta</_NugetVersionPostfix>-->
 		<_NugetVersionPostfix></_NugetVersionPostfix>
 
 		<OutputType>Library</OutputType>
-		<_DotNetVersion>net6.0</_DotNetVersion>
+		<_DotNetVersion>net8.0</_DotNetVersion>
 		<TargetFramework>$(_DotNetVersion)</TargetFramework>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
