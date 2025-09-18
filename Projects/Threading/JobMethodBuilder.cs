@@ -88,7 +88,7 @@ public struct JobMethodBuilder
 		{
 			// use the default continuation
 			result.CaptureContext();
-			awaiter.OnCompleted(result.MoveToNextStage);
+			awaiter.OnCompleted(result.ExecuteAwaiterContinuation);
 		}
 	}
 
@@ -114,7 +114,7 @@ public struct JobMethodBuilder
 		{
 			// use the default continuation
 			result.CaptureContext();
-			awaiter.UnsafeOnCompleted(result.MoveToNextStage);
+			awaiter.UnsafeOnCompleted(result.ExecuteAwaiterContinuation);
 		}
 	}
 
@@ -194,12 +194,17 @@ public struct JobMethodBuilder
 			RuntimeContext = jobRuntimeContext;
 		}
 
-		protected override void ExecuteProcedureImpl()
+		protected override void InvokeProcedureAction()
 		{
 			// this will call StateMachine.MoveNext without updating the Status
 			// Status will be set by the JobMethodBuilder either
 			// through SerResult or through SetException method
 			MoveToNextStage();
+		}
+
+		public void ExecuteAwaiterContinuation()
+		{
+			ExecuteProcedureImpl();
 		}
 
 		protected override void RegisterContinuation(Job job, JobContinuationOptions extraOptions)
@@ -320,7 +325,7 @@ public struct JobMethodBuilderT<TResult>
 		{
 			// use the default continuation
 			result.CaptureContext();
-			awaiter.OnCompleted(result.MoveToNextStage);
+			awaiter.OnCompleted(result.ExecuteAwaiterContinuation);
 		}
 	}
 
@@ -346,7 +351,7 @@ public struct JobMethodBuilderT<TResult>
 		{
 			// use the default continuation
 			result.CaptureContext();
-			awaiter.UnsafeOnCompleted(result.MoveToNextStage);
+			awaiter.UnsafeOnCompleted(result.ExecuteAwaiterContinuation);
 		}
 	}
 
@@ -426,12 +431,17 @@ public struct JobMethodBuilderT<TResult>
 			RuntimeContext = jobRuntimeContext;
 		}
 
-		protected override void ExecuteProcedureImpl()
+		protected override void InvokeProcedureAction()
 		{
 			// this will call StateMachine.MoveNext without updating the Status
 			// Status will be set by the JobMethodBuilder either
 			// through SerResult or through SetException method
 			MoveToNextStage();
+		}
+
+		public void ExecuteAwaiterContinuation()
+		{
+			ExecuteProcedureImpl();
 		}
 
 		protected override void RegisterContinuation(Job job, JobContinuationOptions extraOptions)

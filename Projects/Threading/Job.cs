@@ -439,7 +439,7 @@ public class Job : IAsyncResult, IDisposable
 			{
 				Current = this;
 
-				ExecuteProcedureImpl();
+				InvokeProcedureAction();
 			}
 			finally
 			{
@@ -543,8 +543,6 @@ public class Job : IAsyncResult, IDisposable
 	internal JobStatus ExecuteProcedure()
 	{
 		JobStatus result = JobStatus.Created;
-		Job? prevJob = Current;
-		Current = this;
 
 		try
 		{
@@ -552,10 +550,6 @@ public class Job : IAsyncResult, IDisposable
 			result = ExecuteProcedureCore();
 		}
 		catch (Exception /*exc*/) { }
-		finally
-		{
-			Current = prevJob;
-		}
 
 		return result;
 	}
@@ -667,6 +661,39 @@ public class Job : IAsyncResult, IDisposable
 
 		return result;
 	}
+	protected void ExecuteProcedureImpl()
+	{
+		Job? prevJob = Current;
+		Current = this;
+		try
+		{
+			InvokeProcedureAction();
+		}
+		finally
+		{
+			Current = prevJob;
+		}
+	}
+	protected virtual void InvokeProcedureAction()
+	{
+		// Invoke the delegate
+		Debug.Assert(Procedure != null, "Null Procedure in ExecuteProcedureImpl()");
+
+		if (Procedure is Action action)
+		{
+			action();
+			return;
+		}
+
+		if (Procedure is Action<Object?> actionWithState)
+		{
+			actionWithState(AsyncState);
+			return;
+		}
+
+		Debug.Fail("Invalid Procedure in Job");
+	}
+
 	protected Int32 ExecuteContinuationsCore(JobStatus executionStatus)
 	{
 		// note: do not extend the continuation base index so those will be processed
@@ -803,26 +830,20 @@ public class Job : IAsyncResult, IDisposable
 
 		return ranJobCounter;
 	}
-	protected virtual void ExecuteProcedureImpl()
+	protected void ExecuteContinuationImpl()
 	{
-		// Invoke the delegate
-		Debug.Assert(Procedure != null, "Null Procedure in ExecuteProcedureImpl()");
-
-		if (Procedure is Action action)
+		Job? prevJob = Current;
+		Current = this;
+		try
 		{
-			action();
-			return;
+			InvokeContinuationAction();
 		}
-
-		if (Procedure is Action<Object?> actionWithState)
+		finally
 		{
-			actionWithState(AsyncState);
-			return;
+			Current = prevJob;
 		}
-
-		Debug.Fail("Invalid Procedure in Job");
 	}
-	protected virtual void ExecuteContinuationImpl()
+	protected virtual void InvokeContinuationAction()
 	{
 		// Invoke the delegate
 		Debug.Assert(Initiator != null, "Null Initiator in Job.ExecuteContinuationImpl()");
@@ -831,7 +852,7 @@ public class Job : IAsyncResult, IDisposable
 		if (Procedure is Action awaitAction)
 		{
 			// See SetAwaiterContinuation(Action continuation, JobAwaiterConfiguration configuration) method
-			ExecuteAwaitContinuationImpl(awaitAction);
+			InvokeAwaitContinuationAction(awaitAction);
 			return;
 		}
 
@@ -851,7 +872,7 @@ public class Job : IAsyncResult, IDisposable
 
 		Debug.Fail("Invalid Procedure in Continuation Job");
 	}
-	protected virtual void ExecuteAwaitContinuationImpl(Action awaitAction)
+	protected virtual void InvokeAwaitContinuationAction(Action awaitAction)
 	{
 		ExecuteAction(awaitAction, AsyncState as AwaiterConfiguration,
 			(CreationOptions & JobCreationOptions.RunSynchronously) == JobCreationOptions.RunSynchronously);
@@ -2296,7 +2317,7 @@ public class Job<TResult> : Job
 		base.ResetStatus();
 	}
 
-	protected override void ExecuteProcedureImpl()
+	protected override void InvokeProcedureAction()
 	{
 		// Invoke the delegate
 		Debug.Assert(Procedure != null, "Null Procedure in Job<TResult>.ExecuteProcedureImpl()");
@@ -2316,7 +2337,7 @@ public class Job<TResult> : Job
 		Debug.Fail("Invalid Procedure in Job");
 	}
 
-	protected override void ExecuteContinuationImpl()
+	protected override void InvokeContinuationAction()
 	{
 		// Invoke the delegate
 		Debug.Assert(Initiator != null, "Null Initiator in Job<TResult>.ExecuteContinuationImpl()");
@@ -2326,7 +2347,7 @@ public class Job<TResult> : Job
 		{
 			// See JobMethodBuilder.ResultJob.StateMachine.set, JobMethodBuilderT<TResult>.ResultJob.StateMachine.set
 			// See SetAwaiterContinuation(Action continuation, JobAwaiterConfiguration configuration) method
-			ExecuteAwaitContinuationImpl(awaitAction);
+			InvokeAwaitContinuationAction(awaitAction);
 			return;
 		}
 

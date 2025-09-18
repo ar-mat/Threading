@@ -82,7 +82,7 @@ public class JobSchedulerUnitTest_RuntimeScope
 
 	#endregion // UserData test
 
-	#region CorrelationIDTest
+	#region CorrelationID test
 
 	[Fact]
 	public void CorrelationIDPerAsyncOperation()
@@ -137,5 +137,42 @@ public class JobSchedulerUnitTest_RuntimeScope
 			await NestedAsyncMethodCall(testNum, expectedCorrID, depth + 1).ConfigureAwait(false);
 	}
 
-	#endregion // CorrelationIDTest
+	#endregion // CorrelationID test
+
+	#region JobRuntimeScopeWithAsyncTask test
+
+	[Fact]
+	public void JobRuntimeScopeWithAsyncTask()
+	{
+		Output.WriteLine("Begin test");
+
+		Job job = RunJobRuntimeScopeWithAsyncTask();
+		job.Wait();
+
+		Output.WriteLine("End test");
+	}
+
+	private async Job RunJobRuntimeScopeWithAsyncTask()
+	{
+		// Create a scope with a string value
+		using var scope = JobRuntimeScope.Enter<String>(() => "Test");
+
+		// Validate the scope value
+		Assert.True(JobRuntimeScope.GetValue<String>() == "Test");
+
+		// Run some async Job
+		await Job.Run(AsyncExecutableMethod).ConfigureAwait(false);
+		Assert.True(JobRuntimeScope.GetValue<String>() == "Test");
+
+		// Run some async Task
+		await Task.Run(AsyncExecutableMethod).ConfigureAwait(false);
+		Assert.True(JobRuntimeScope.GetValue<String>() == "Test");
+	}
+
+	private void AsyncExecutableMethod()
+	{
+		Output.WriteLine("Running AsyncExecutableMethod");
+	}
+
+	#endregion // JobRuntimeScopeWithAsyncTask test
 }

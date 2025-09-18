@@ -41,7 +41,11 @@ public class JobSchedulerUnitTest_Performance
 		Int64 tasksDuration = _stopWatchTasksPerformance.ElapsedMilliseconds;
 		Output.WriteLine($"Task result = {resultTask}, duration = {tasksDuration} ms");
 
-		Int32 expectedDurationErrorPerc = 200;
+#if DEBUG
+		Int32 expectedDurationErrorPerc = 5000;
+#else
+		Int32 expectedDurationErrorPerc = 150;
+#endif
 		Boolean succeededPerformance = Math.Abs(jobsDuration - tasksDuration) < (tasksDuration * expectedDurationErrorPerc) / 100;
 
 		Assert.True(resultJob == resultTask, "Sanity test");
@@ -64,8 +68,12 @@ public class JobSchedulerUnitTest_Performance
 		Int64 tasksDuration = _stopWatchTasksPerformance.ElapsedMilliseconds;
 		Output.WriteLine($"Task result = {resultTask}, duration = {tasksDuration} ms");
 
-		// TODO: Jobs are bout 5 times slow then tasks in this case, need to optimize...
+#if DEBUG
 		Int32 expectedDurationErrorPerc = 1000;
+#else
+		Int32 expectedDurationErrorPerc = 150;
+#endif
+
 		Boolean succeededPerformance = Math.Abs(jobsDuration - tasksDuration) < (tasksDuration * expectedDurationErrorPerc) / 100;
 
 		Assert.True(resultJob == resultTask, "Sanity test");
@@ -232,7 +240,7 @@ public class JobSchedulerUnitTest_Performance
 		return sum;
 	}
 
-	#endregion // 006-010 - Verify WaitAll and WaitAny
+#endregion // 006-010 - Verify WaitAll and WaitAny
 
 	#region 008-030 - Compare TPL vs JSL on Using await in loop
 
