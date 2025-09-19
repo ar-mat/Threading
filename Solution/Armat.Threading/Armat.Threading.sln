@@ -7,6 +7,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Threading", "..\..\Projects
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThreadingTest", "..\..\Projects\ThreadingTest\ThreadingTest.csproj", "{624F693E-59E6-48E5-86BE-A0F0BEB1149A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BuildScripts", "BuildScripts", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\BuildScripts\GetAssemblyVersion.ps1 = ..\..\BuildScripts\GetAssemblyVersion.ps1
+		..\..\BuildScripts\Pack.ps1 = ..\..\BuildScripts\Pack.ps1
+		..\..\BuildScripts\Publish.ps1 = ..\..\BuildScripts\Publish.ps1
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

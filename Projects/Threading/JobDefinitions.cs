@@ -309,23 +309,4 @@ public class TransientAggregateException : AggregateException
 	//   T:System.ArgumentException:
 	//     An element of innerExceptions is null.
 	public TransientAggregateException(String message, params Exception[] innerExceptions) : base(message, innerExceptions) { }
-	//
-	// Summary:
-	//     Initializes a new instance of the Armat.Threading.TransientAggregateException class with serialized
-	//     data.
-	//
-	// Parameters:
-	//   info:
-	//     The object that holds the serialized object data.
-	//
-	//   context:
-	//     The contextual information about the source or destination.
-	//
-	// Exceptions:
-	//   T:System.ArgumentNullException:
-	//     The info argument is null.
-	//
-	//   T:System.Runtime.Serialization.SerializationException:
-	//     The exception could not be deserialized correctly.
-	protected TransientAggregateException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
 }
