@@ -9,12 +9,12 @@
 		<RootNamespace>Armat.Threading</RootNamespace>
 		<AssemblyName>armat.threading.test</AssemblyName>
 
-		<Version>1.0.0</Version>
+		<Version>2.0.0</Version>
 		<AssemblyVersion>$(Version).0</AssemblyVersion>
 		<FileVersion>$(Version).0</FileVersion>
 
 		<OutputType>Library</OutputType>
-		<_DotNetVersion>net6.0</_DotNetVersion>
+		<_DotNetVersion>net8.0</_DotNetVersion>
 		<TargetFramework>$(_DotNetVersion)</TargetFramework>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
@@ -30,15 +30,36 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="coverlet.collector" Version="3.2.0" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
-		<PackageReference Include="xunit" Version="2.4.2" />
-		<PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
+		<PackageReference Include="coverlet.collector" Version="6.0.4">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+		<PackageReference Include="xunit" Version="2.9.3" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Threading\Threading.csproj" />
 	</ItemGroup>
+
+	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
+		<PackageReference Include="armat.utils" Version="1.0.0" />
+	</ItemGroup>
+
+	<!-- Begin: Simplify the development by including the locally built version of the dependency modules-->
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<ArmatRepoRoot>D:/Sources/GitHub</ArmatRepoRoot>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<Reference Include="armat.utils">
+			<HintPath>$(ArmatRepoRoot)/Utilities/bin/$(Configuration)/armat.utils.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+	<!-- End: Simplify the development by including the locally built version of the dependency modules-->
 
 	<!-- Remove redundant translation directories from bin -->
 	<!-- See https://stackoverflow.com/questions/31289043/unwanted-culture-specific-dlls-copied-to-bin-directory/34362524#34362524 -->

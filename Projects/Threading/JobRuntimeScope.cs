@@ -23,7 +23,7 @@ public sealed class JobRuntimeScope : IDisposable
 	// in case the scope key is already used, it will return the existing one
 	public static JobRuntimeScope Enter(String key, Func<Object> factory)
 	{
-		return Create(key, factory, false);
+		return Create(key, factory);
 	}
 	// enters a scope with a given key
 	// Value will be initialized using the given factory() method
@@ -32,7 +32,7 @@ public sealed class JobRuntimeScope : IDisposable
 	public static JobRuntimeScope Enter<T>(String key, Func<T> factory)
 		where T : class
 	{
-		return Enter(key, () => (Object)factory());
+		return Create(key, () => (Object)factory());
 	}
 	// enters a scope with a given T type
 	// Value will be initialized using the given factory() method
@@ -41,36 +41,10 @@ public sealed class JobRuntimeScope : IDisposable
 	public static JobRuntimeScope Enter<T>(Func<T> factory)
 		where T : class
 	{
-		return Enter(typeof(T).FullName!, () => factory());
-	}
-	// tries to enter a new scope with a given key
-	// Value will be initialized using the given factory() method
-	// it will hold the Value while executing code running within the scope
-	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
-	public static JobRuntimeScope EnterNew(String key, Func<Object> factory)
-	{
-		return Create(key, factory, true);
-	}
-	// tries to enter a new scope with a given key
-	// Value will be initialized using the given factory() method
-	// it will hold the Value while executing code within the scope
-	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
-	public static JobRuntimeScope EnterNew<T>(String key, Func<T> factory)
-		where T : class
-	{
-		return EnterNew(key, () => (Object)factory());
-	}
-	// tries to enter a new scope with a given T type
-	// Value will be initialized using the given factory() method
-	// it will hold the Value while executing code running within the scope
-	// in case the scope key is already used, it will return JobRuntimeScope.Null and the value won't be constructed
-	public static JobRuntimeScope EnterNew<T>(Func<T> factory)
-		where T : class
-	{
-		return EnterNew(typeof(T).FullName!, () => factory());
+		return Create(typeof(T).FullName!, () => factory());
 	}
 
-	private static JobRuntimeScope Create(String key, Func<Object> factory, Boolean createNew)
+	private static JobRuntimeScope Create(String key, Func<Object> factory)
 	{
 		if (key.Length == 0)
 			throw new ArgumentException("JobRuntimeScope key cannot be empty", nameof(key));
@@ -82,14 +56,10 @@ public sealed class JobRuntimeScope : IDisposable
 		JobRuntimeScope result = context.GetScope(key);
 		if (!result.IsNull)
 		{
-			if (createNew)
-			{
-				// it should always create new scope, thus returning Null as a failure result
-				return Null;
-			}
-
-			// return the existing scope
-			return result;
+			// it should always create new scope, thus returning Null as a failure result
+			// returning the existing scope would lead the following bug:
+			// In case of a reentrant method, the same scope would be disposed when exiting the nested method
+			return Null;
 		}
 
 		// create the scope
@@ -165,11 +135,10 @@ public sealed class JobRuntimeScope : IDisposable
 // JobRuntimeContext class holds collection of JobRuntimeScope objects within a given Job execution context
 public struct JobRuntimeContext
 {
-	private Dictionary<String, JobRuntimeScope> _currentScopes;
+	private Dictionary<String, JobRuntimeScope>? _currentScopes = null;
 
 	public JobRuntimeContext()
 	{
-		_currentScopes = new Dictionary<String, JobRuntimeScope>();
 	}
 	public static JobRuntimeContext Empty { get; } = new();
 
@@ -198,10 +167,10 @@ public struct JobRuntimeContext
 		if (currentThreadContext == null)
 			return 0;
 
-		IReadOnlyCollection<JobRuntimeScope> currentThreadScopes = currentThreadContext.Scopes;
+		IReadOnlyCollection<JobRuntimeScope>? currentThreadScopes = currentThreadContext.Scopes;
 		Int32 result = 0;
 
-		if (currentThreadScopes.Count > 0)
+		if (currentThreadScopes != null && currentThreadScopes.Count > 0)
 		{
 			foreach (JobRuntimeScope scope in currentThreadScopes)
 			{
@@ -237,29 +206,28 @@ public struct JobRuntimeContext
 // There's a unique ThreadRuntimeContext instance per each thread
 public class ThreadRuntimeContext
 {
-	private Dictionary<String, JobRuntimeScope> _currentScopes;
+	private Dictionary<String, JobRuntimeScope>? _currentScopes = null;
 
 	private ThreadRuntimeContext()
 	{
-		_currentScopes = new Dictionary<String, JobRuntimeScope>();
 	}
 
 	public Boolean IsEmpty
 	{
-		get { return _currentScopes.Count == 0; }
+		get { return _currentScopes == null || _currentScopes.Count == 0; }
 	}
-	public IReadOnlyCollection<JobRuntimeScope> Scopes
+	public IReadOnlyCollection<JobRuntimeScope>? Scopes
 	{
-		get { return _currentScopes.Values; }
+		get { return _currentScopes?.Values; }
 	}
 
 	public Boolean Contains(String key)
 	{
-		return _currentScopes.ContainsKey(key);
+		return _currentScopes != null && _currentScopes.ContainsKey(key);
 	}
 	public JobRuntimeScope GetScope(String key)
 	{
-		if (_currentScopes.TryGetValue(key, out JobRuntimeScope? scope))
+		if (_currentScopes != null && _currentScopes.TryGetValue(key, out JobRuntimeScope? scope))
 			return scope;
 
 		return JobRuntimeScope.Null;
@@ -271,21 +239,19 @@ public class ThreadRuntimeContext
 			throw new ArgumentException("JobRuntimeScope.Enter failed", nameof(scope));
 
 		_currentScopes ??= new Dictionary<String, JobRuntimeScope>();
-
 		_currentScopes.Add(scope.Key, scope);
+
 		JobMethodBuilderContext.AddScope(scope);
 
 		return true;
 	}
 	public Boolean RemoveScope(String key)
 	{
-		if (_currentScopes == null)
-			return false;
-
-		if (!_currentScopes.Remove(key))
+		if (_currentScopes == null || !_currentScopes.Remove(key))
 			return false;
 
 		JobMethodBuilderContext.RemoveScope(key);
+
 		return true;
 	}
 
@@ -367,6 +333,7 @@ public struct JobMethodBuilderContext : IDisposable
 
 		return true;
 	}
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0251:Make member 'readonly'", Justification = "<Pending>")]
 	private Boolean RemoveImpl(String key)
 	{
 		if (_listScopes == null)
@@ -408,6 +375,7 @@ public struct JobMethodBuilderContext : IDisposable
 			scopes[i].Dispose();
 	}
 
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0251:Make member 'readonly'", Justification = "<Pending>")]
 	public void Dispose()
 	{
 		if (_jmbStack == null || _jmbStack.Count == 0)
