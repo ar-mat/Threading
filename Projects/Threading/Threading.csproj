@@ -42,7 +42,7 @@
 
 		<PackageVersion>$(Version)$(_NugetVersionPostfix)</PackageVersion>
 		<PackageProjectUrl>$(_ProjectWebpageUrl)</PackageProjectUrl>
-		<RepositoryUrl>$(_SourceCoreRepositoryRootUrl)/Projects/Threading</RepositoryUrl>
+		<RepositoryUrl>$(_SourceCoreRepositoryRootUrl)</RepositoryUrl>
 		<RepositoryType>$(_SourceCoreRepositoryType)</RepositoryType>
 		<PackageLicenseExpression>$(_ProjectLicenseType)</PackageLicenseExpression>
 
