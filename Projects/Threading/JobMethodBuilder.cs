@@ -209,9 +209,6 @@ public struct JobMethodBuilder
 
 		protected override void RegisterContinuation(Job job, JobContinuationOptions extraOptions)
 		{
-			if (job == null)
-				throw new ArgumentNullException(nameof(job));
-
 			// run the only method builder job continuation synchronously
 			// it will run as a continuation of the last step in the MethodBuilder
 			// and will run in the same thread. No need to create another job for this.
@@ -446,9 +443,6 @@ public struct JobMethodBuilderT<TResult>
 
 		protected override void RegisterContinuation(Job job, JobContinuationOptions extraOptions)
 		{
-			if (job == null)
-				throw new ArgumentNullException(nameof(job));
-
 			// run the only method builder job continuation synchronously
 			// it will run as a continuation of the last step in the MethodBuilder
 			// and will run in the same thread. No need to create another job for this.

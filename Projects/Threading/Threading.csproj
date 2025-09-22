@@ -9,7 +9,7 @@
 		<RootNamespace>Armat.Threading</RootNamespace>
 		<AssemblyName>armat.threading</AssemblyName>
 
-		<Version>2.0.0</Version>
+		<Version>2.0.1</Version>
 		<AssemblyVersion>$(Version).0</AssemblyVersion>
 		<FileVersion>$(Version).0</FileVersion>
 		<!--<_NugetVersionPostfix>-beta</_NugetVersionPostfix>-->
@@ -49,7 +49,7 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
-		<PackageReference Include="armat.utils" Version="1.0.0" />
+		<PackageReference Include="armat.utils" Version="2.0.1" />
 	</ItemGroup>
 
 	<!-- Begin: Simplify the development by including the locally built version of the dependency modules-->

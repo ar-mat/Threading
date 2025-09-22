@@ -378,9 +378,6 @@ public class Job : IAsyncResult, IDisposable
 	}
 	public void Run(IJobScheduler jobScheduler)
 	{
-		if (jobScheduler == null)
-			throw new ArgumentNullException(nameof(jobScheduler));
-
 		Job? detectedInitiator = Initiator;
 		if (detectedInitiator == null)
 		{
@@ -1636,16 +1633,10 @@ public class Job : IAsyncResult, IDisposable
 
 	public static Job FromException(Exception exception)
 	{
-		if (exception == null)
-			throw new ArgumentNullException(nameof(exception));
-
 		return new Job(exception);
 	}
 	public static Job<TResult> FromException<TResult>(Exception exception)
 	{
-		if (exception == null)
-			throw new ArgumentNullException(nameof(exception));
-
 		return new Job<TResult>(exception);
 	}
 
