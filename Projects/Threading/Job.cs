@@ -1688,7 +1688,7 @@ public class Job : IAsyncResult, IDisposable
 
 		delayJob.Run();
 
-		return delayJob.ConfigureAwait(true);
+		return delayJob.ConfigureAwait(false);
 	}
 	// use await Job.Yield(scheduler) to immediately return from an asynchronous method
 	public static ConfiguredAwaiter Yield(IJobScheduler jobScheduler)
@@ -1697,7 +1697,7 @@ public class Job : IAsyncResult, IDisposable
 
 		delayJob.Run(jobScheduler);
 
-		return delayJob.ConfigureAwait(true);
+		return delayJob.ConfigureAwait(false);
 	}
 
 	#endregion // Special Jobs

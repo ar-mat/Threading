@@ -8,10 +8,9 @@ if (-not (Test-Path -Path $AssemblyPath)) {
 try {
     # Load the assembly
     $AbsolutePath = (Resolve-Path -Path $AssemblyPath).Path
-    $assembly = [System.Reflection.Assembly]::LoadFile($AbsolutePath)
 
     # Get the version information
-    $assemblyName = $assembly.GetName()
+    $assemblyName = [System.Reflection.AssemblyName]::GetAssemblyName($AbsolutePath)
     $version = $assemblyName.Version
 
     # Get the first three parts of the version

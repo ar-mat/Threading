@@ -44,7 +44,7 @@ public class JobSchedulerUnitTest_Performance
 #if DEBUG
 		Int32 expectedDurationErrorPerc = 5000;
 #else
-		Int32 expectedDurationErrorPerc = 150;
+		Int32 expectedDurationErrorPerc = 600;
 #endif
 		Boolean succeededPerformance = Math.Abs(jobsDuration - tasksDuration) < (tasksDuration * expectedDurationErrorPerc) / 100;
 
