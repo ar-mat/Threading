@@ -264,6 +264,10 @@ public class ThreadRuntimeContext
 		{
 			return _current;
 		}
+		internal set
+		{
+			_current = value;
+		}
 	}
 	public static ThreadRuntimeContext GetOrCreateCurrent()
 	{

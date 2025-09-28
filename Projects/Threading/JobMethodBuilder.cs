@@ -237,7 +237,7 @@ public struct JobMethodBuilder
 			// Calling the Procedure will actually execute StateMachine.MoveNext
 			// AwaiterConfiguration from AsyncState is used to embrace
 			//   the call of Action = MoveToNextStage within caller Execution Context
-			ExecuteAction((Action)Procedure, AsyncState as AwaiterConfiguration, true);
+			ExecuteAwaitContinuation((Action)Procedure, AsyncState as AwaiterConfiguration, true);
 		}
 	}
 }
@@ -471,7 +471,7 @@ public struct JobMethodBuilderT<TResult>
 			// Calling the Procedure will actually execute StateMachine.MoveNext
 			// AwaiterConfiguration from AsyncState is used to embrace
 			//   the call of Action = MoveToNextStage within caller Execution Context
-			ExecuteAction((Action)Procedure, AsyncState as AwaiterConfiguration, true);
+			ExecuteAwaitContinuation((Action)Procedure, AsyncState as AwaiterConfiguration, true);
 		}
 	}
 }

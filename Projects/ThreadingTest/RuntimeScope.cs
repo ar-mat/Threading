@@ -160,6 +160,9 @@ public class JobSchedulerUnitTest_RuntimeScope
 		// Validate the scope value
 		Assert.True(JobRuntimeScope.GetValue<String>() == "Test");
 
+		await Job.Yield();
+		Assert.True(JobRuntimeScope.GetValue<String>() == "Test");
+
 		// Run some async Job
 		await Job.Run(AsyncExecutableMethod).ConfigureAwait(false);
 		Assert.True(JobRuntimeScope.GetValue<String>() == "Test");
@@ -175,4 +178,78 @@ public class JobSchedulerUnitTest_RuntimeScope
 	}
 
 	#endregion // JobRuntimeScopeWithAsyncTask test
+
+	#region NestedJobRuntimeScopes test
+
+	[Fact]
+	public void NestedJobRuntimeScopes()
+	{
+		Output.WriteLine("Begin test");
+
+		Job job = RunNestedScopesAsyncTask(1, 3);
+		job.Wait();
+
+		Output.WriteLine("End test");
+	}
+
+	private async Job RunNestedScopesAsyncTask(Int32 keyIndex, Int32 maxDepth)
+	{
+		if (keyIndex > 1)
+		{
+			// ensure that the caller scope is still valid
+			for (Int32 callerIndex = 1; callerIndex < keyIndex; callerIndex++)
+			{
+				// Validate the scope value
+				Assert.True(JobRuntimeScope.GetValue($"Key {callerIndex}") is String strValue && strValue == $"Value {callerIndex}");
+			}
+		}
+
+		// Create a scope with a string value
+		using var scope = JobRuntimeScope.Enter($"Key {keyIndex}", () => $"Value {keyIndex}");
+
+		{
+			// Validate the scope value
+			Assert.True(JobRuntimeScope.GetValue($"Key {keyIndex}") is String strValue && strValue == $"Value {keyIndex}");
+		}
+
+		await Job.Yield();
+		{
+			// Validate the scope value
+			Assert.True(JobRuntimeScope.GetValue($"Key {keyIndex}") is String strValue && strValue == $"Value {keyIndex}");
+		}
+
+		// Run some async Job
+		await Job.Run(AsyncExecutableNestedMethod, (Object?)keyIndex).ConfigureAwait(false);
+		{
+			// Validate the scope value
+			Assert.True(JobRuntimeScope.GetValue($"Key {keyIndex}") is String strValue && strValue == $"Value {keyIndex}");
+		}
+
+		// recursively run this method
+		if (keyIndex < maxDepth)
+		{
+			await RunNestedScopesAsyncTask(keyIndex + 1, maxDepth).ConfigureAwait(false);
+			{
+				// Validate the scope value
+				Assert.True(JobRuntimeScope.GetValue($"Key {keyIndex}") is String strValue && strValue == $"Value {keyIndex}");
+			}
+		}
+
+		if (keyIndex < maxDepth)
+		{
+			// ensure that the deeper scopes are not visible
+			for (Int32 deeperIndex = keyIndex + 1; deeperIndex <= maxDepth; deeperIndex++)
+			{
+				// Validate the scope value
+				Assert.True(JobRuntimeScope.GetValue($"Key {deeperIndex}") == null);
+			}
+		}
+	}
+
+	private void AsyncExecutableNestedMethod(Object? state)
+	{
+		Output.WriteLine($"Running AsyncExecutableNestedMethod<{state}>");
+	}
+
+	#endregion // NestedJobRuntimeScopes test
 }

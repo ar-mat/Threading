@@ -871,7 +871,7 @@ public class Job : IAsyncResult, IDisposable
 	}
 	protected virtual void InvokeAwaitContinuationAction(Action awaitAction)
 	{
-		ExecuteAction(awaitAction, AsyncState as AwaiterConfiguration,
+		ExecuteAwaitContinuation(awaitAction, AsyncState as AwaiterConfiguration,
 			(CreationOptions & JobCreationOptions.RunSynchronously) == JobCreationOptions.RunSynchronously);
 	}
 
@@ -896,36 +896,77 @@ public class Job : IAsyncResult, IDisposable
 			}
 		}
 	}
-	protected static void ExecuteAction(Action awaitAction, AwaiterConfiguration? configuration, Boolean runSynchronously)
+	protected static void ExecuteAwaitContinuation(Action action, AwaiterConfiguration? configuration, Boolean runSynchronously)
 	{
-		if (awaitAction == null)
-			throw new ArgumentNullException(nameof(awaitAction));
+		if (action == null)
+			throw new ArgumentNullException(nameof(action));
 
 		if (configuration?.SynchronizationContext != null && configuration.SynchronizationContext != SynchronizationContext.Current)
 		{
+			Job? currentJob = Current;
+			ThreadRuntimeContext? currentThreadContext = ThreadRuntimeContext.Current;
+
+			Tuple<Action, Job?, ThreadRuntimeContext?> actionWithContext = new(action, currentJob, currentThreadContext);
 			if (runSynchronously)
-				configuration.SynchronizationContext.Send(_fnActionExecutorSendOrPostCallback, awaitAction);
+				configuration.SynchronizationContext.Send(_fnActionExecutorSendOrPostCallback, actionWithContext);
 			else
-				configuration.SynchronizationContext.Post(_fnActionExecutorSendOrPostCallback, awaitAction);
+				configuration.SynchronizationContext.Post(_fnActionExecutorSendOrPostCallback, actionWithContext);
 		}
 		else if (configuration?.ExecutionContext != null)
 		{
-			ExecutionContext.Run(configuration.ExecutionContext, _fnActionExecutorContextCallback, awaitAction);
+			ExecutionContext.Run(configuration.ExecutionContext, _fnActionExecutorContextCallback, action);
 		}
 		else
 		{
-			awaitAction();
+			action();
 		}
 	}
-	private static void ActionExecutorProc(Object? action)
+	private static void SynchronizationContextRunProc(Object? state)
+	{
+		if (state is Tuple<Action, Job?, ThreadRuntimeContext?> actionWithContext)
+		{
+			// save previous context
+			Job? prevJob = Current;
+			ThreadRuntimeContext? prevThreadContext = ThreadRuntimeContext.Current;
+
+			try
+			{
+				Action action = actionWithContext.Item1;
+				Job? currentJob = actionWithContext.Item2;
+				ThreadRuntimeContext? currentThreadContext = actionWithContext.Item3;
+
+				// set current context
+				Current = currentJob;
+				ThreadRuntimeContext.Current = currentThreadContext;
+
+				// run the action
+				action();
+			}
+			finally
+			{
+				// restore previous context
+				Current = prevJob;
+				ThreadRuntimeContext.Current = prevThreadContext;
+			}
+		}
+		else
+		{
+			Debug.Assert(false, "ActionExecutorProc should be called with an \"Action\" parameter");
+		}
+	}
+	private static void ExecutionContextRunProc(Object? action)
 	{
 		if (action is Action fn)
+		{
 			fn();
+		}
 		else
+		{
 			Debug.Assert(false, "ActionExecutorProc should be called with an \"Action\" parameter");
+		}
 	}
-	private static readonly SendOrPostCallback _fnActionExecutorSendOrPostCallback = new(ActionExecutorProc);
-	private static readonly ContextCallback _fnActionExecutorContextCallback = new(ActionExecutorProc);
+	private static readonly SendOrPostCallback _fnActionExecutorSendOrPostCallback = new(SynchronizationContextRunProc);
+	private static readonly ContextCallback _fnActionExecutorContextCallback = new(ExecutionContextRunProc);
 
 	private IReadOnlyCollection<Job>? GetPendingContinuations(Boolean extendContinuationsBaseIndex)
 	{
