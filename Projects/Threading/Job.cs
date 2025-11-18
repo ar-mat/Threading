@@ -879,7 +879,7 @@ public class Job : IAsyncResult, IDisposable
 	{
 		if (CancellationToken.IsCancellationRequested || IsCanceled)
 		{
-			throw new OperationCanceledException();
+			throw new OperationCanceledException(CancellationToken);
 		}
 		else
 		{
@@ -1808,7 +1808,7 @@ public class Job : IAsyncResult, IDisposable
 		{
 			if (!job.WaitNoThrow(timeout))
 				return false;
-			if (sw.ElapsedMilliseconds >= timeout.Milliseconds)
+			if (sw.ElapsedMilliseconds >= timeout.TotalMilliseconds)
 				return false;
 		}
 
@@ -1841,6 +1841,9 @@ public class Job : IAsyncResult, IDisposable
 		}
 
 		Int32 result = WaitHandle.WaitAny(listWaitHandles.ToArray());
+		if (result == WaitHandle.WaitTimeout)
+			return -1;
+
 		return listIndexMap[result];
 	}
 	public static Int32 WaitAny(Job[] jobs, Int32 millisecondsTimeout)
@@ -1869,6 +1872,9 @@ public class Job : IAsyncResult, IDisposable
 		}
 
 		Int32 result = WaitHandle.WaitAny(listWaitHandles.ToArray(), millisecondsTimeout);
+		if (result == WaitHandle.WaitTimeout)
+			return -1;
+
 		return listIndexMap[result];
 	}
 	public static Int32 WaitAny(Job[] jobs, CancellationToken cancellationToken)
@@ -1895,13 +1901,16 @@ public class Job : IAsyncResult, IDisposable
 			listWaitHandles.Add(job.AsyncWaitHandleSlim.WaitHandle);
 			listIndexMap.Add(index);
 		}
-		if (!cancellationToken.CanBeCanceled)
+		if (cancellationToken.CanBeCanceled)
 		{
 			listWaitHandles.Add(cancellationToken.WaitHandle);
 			listIndexMap.Add(-1);
 		}
 
 		Int32 result = WaitHandle.WaitAny(listWaitHandles.ToArray());
+		if (result == WaitHandle.WaitTimeout)
+			return -1;
+
 		return listIndexMap[result];
 	}
 	public static Int32 WaitAny(Job[] jobs, Int32 millisecondsTimeout, CancellationToken cancellationToken)
@@ -1928,13 +1937,16 @@ public class Job : IAsyncResult, IDisposable
 			listWaitHandles.Add(job.AsyncWaitHandleSlim.WaitHandle);
 			listIndexMap.Add(index);
 		}
-		if (!cancellationToken.CanBeCanceled)
+		if (cancellationToken.CanBeCanceled)
 		{
 			listWaitHandles.Add(cancellationToken.WaitHandle);
 			listIndexMap.Add(-1);
 		}
 
 		Int32 result = WaitHandle.WaitAny(listWaitHandles.ToArray(), millisecondsTimeout);
+		if (result == WaitHandle.WaitTimeout)
+			return -1;
+
 		return listIndexMap[result];
 	}
 	public static Int32 WaitAny(Job[] jobs, TimeSpan timeout)
@@ -1963,6 +1975,9 @@ public class Job : IAsyncResult, IDisposable
 		}
 
 		Int32 result = WaitHandle.WaitAny(listWaitHandles.ToArray(), timeout);
+		if (result == WaitHandle.WaitTimeout)
+			return -1;
+
 		return listIndexMap[result];
 	}
 

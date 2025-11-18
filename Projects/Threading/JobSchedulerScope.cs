@@ -1,11 +1,6 @@
-﻿
-using System;
-using System.Transactions;
-
-using static System.Formats.Asn1.AsnWriter;
+﻿using System;
 
 namespace Armat.Threading;
-
 
 // Used to control the value of IJobScheduler.Current for the given method scope
 // It ensures to reset IJobScheduler.Current to the previous one when disposed

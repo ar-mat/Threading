@@ -9,7 +9,7 @@
 		<RootNamespace>Armat.Threading</RootNamespace>
 		<AssemblyName>armat.threading</AssemblyName>
 
-		<Version>2.0.2</Version>
+		<Version>2.0.3</Version>
 		<AssemblyVersion>$(Version).0</AssemblyVersion>
 		<FileVersion>$(Version).0</FileVersion>
 		<!--<_NugetVersionPostfix>-beta</_NugetVersionPostfix>-->
@@ -22,7 +22,7 @@
 
 		<_BinDir>$(SolutionDir)\..\..\bin\$(Configuration)</_BinDir>
 		<OutputPath>$(_BinDir)\</OutputPath>
-		<IntermediateOutputPath>$(OutputPath)\obj\$(MSBuildProjectName)\</IntermediateOutputPath>
+		<IntermediateOutputPath>$(OutputPath)\obj\$(MSBuildProjectName)\</IntermediateOutputPathB>
 
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
@@ -49,7 +49,7 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
-		<PackageReference Include="armat.utils" Version="2.0.1" />
+		<PackageReference Include="armat.utils" Version="2.0.2" />
 	</ItemGroup>
 
 	<!-- Begin: Simplify the development by including the locally built version of the dependency modules-->
@@ -65,10 +65,6 @@
 
 	<ItemGroup>
 		<None Update="AppIcon.png">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Update="Readme.md">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>

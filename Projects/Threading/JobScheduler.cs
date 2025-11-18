@@ -318,8 +318,7 @@ public class JobScheduler : JobSchedulerBase
 				// this status is set by JobScheduler or the Job itself before the execution is started or during the run
 				// remove the job
 
-				// when updating to any state we should ensure the previous state is correct
-				if (!_jobsInPool.TryRemove(job, out _))
+				if (_jobsInPool.TryRemove(job, out _))
 				{
 					// update statistics
 					if (prevStatus == JobStatus.WaitingForActivation)
@@ -608,7 +607,7 @@ public class JobScheduler : JobSchedulerBase
 		_longRunningThreadsWaitHandle.Set();
 
 		// wait for all threads to exit
-		System.Diagnostics.Stopwatch sw = new();
+		var sw = System.Diagnostics.Stopwatch.StartNew();
 
 		// wait for pool threads
 		Thread[] arrPoolThreads = _poolThreads.ToArray();

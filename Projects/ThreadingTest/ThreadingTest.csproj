@@ -47,7 +47,7 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
-		<PackageReference Include="armat.utils" Version="2.0.1" />
+		<PackageReference Include="armat.utils" Version="2.0.2" />
 	</ItemGroup>
 
 	<!-- Begin: Simplify the development by including the locally built version of the dependency modules-->

@@ -104,9 +104,6 @@ public sealed class JobSchedulerStatisticsCalculator : IDisposable
 
 	public void Queued(Job job)
 	{
-		if (job == null)
-			throw new ArgumentNullException(nameof(job));
-
 		using var locker = _rwLock.CreateWLocker();
 
 		if (!job.IsMethodBuilderResult)
@@ -120,9 +117,6 @@ public sealed class JobSchedulerStatisticsCalculator : IDisposable
 	}
 	public void Started(Job job)
 	{
-		if (job == null)
-			throw new ArgumentNullException(nameof(job));
-
 		using var locker = _rwLock.CreateWLocker();
 
 		if (!job.IsMethodBuilderResult)
@@ -138,9 +132,6 @@ public sealed class JobSchedulerStatisticsCalculator : IDisposable
 	}
 	public void Succeeded(Job job)
 	{
-		if (job == null)
-			throw new ArgumentNullException(nameof(job));
-
 		using var locker = _rwLock.CreateWLocker();
 
 		if (!job.IsMethodBuilderResult)
@@ -156,9 +147,6 @@ public sealed class JobSchedulerStatisticsCalculator : IDisposable
 	}
 	public void Canceled(Job job)
 	{
-		if (job == null)
-			throw new ArgumentNullException(nameof(job));
-
 		using var locker = _rwLock.CreateWLocker();
 
 		if (!job.IsMethodBuilderResult)
@@ -174,9 +162,6 @@ public sealed class JobSchedulerStatisticsCalculator : IDisposable
 	}
 	public void Faulted(Job job)
 	{
-		if (job == null)
-			throw new ArgumentNullException(nameof(job));
-
 		using var locker = _rwLock.CreateWLocker();
 
 		if (!job.IsMethodBuilderResult)
@@ -207,13 +192,13 @@ public sealed class JobSchedulerStatisticsCalculator : IDisposable
 
 		_jobStatistics.QueuedJobs = 0;
 		_jobStatistics.RunningJobs = 0;
-		_jobStatistics.RunningJobs = 0;
+		_jobStatistics.SucceededJobs = 0;
 		_jobStatistics.CanceledJobs = 0;
 		_jobStatistics.FaultedJobs = 0;
 
 		_mbStatistics.QueuedJobs = 0;
 		_mbStatistics.RunningJobs = 0;
-		_mbStatistics.RunningJobs = 0;
+		_mbStatistics.SucceededJobs = 0;
 		_mbStatistics.CanceledJobs = 0;
 		_mbStatistics.FaultedJobs = 0;
 	}
