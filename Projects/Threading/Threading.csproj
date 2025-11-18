@@ -22,7 +22,7 @@
 
 		<_BinDir>$(SolutionDir)\..\..\bin\$(Configuration)</_BinDir>
 		<OutputPath>$(_BinDir)\</OutputPath>
-		<IntermediateOutputPath>$(OutputPath)\obj\$(MSBuildProjectName)\</IntermediateOutputPathB>
+		<IntermediateOutputPath>$(OutputPath)\obj\$(MSBuildProjectName)\</IntermediateOutputPath>
 
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
