@@ -54,7 +54,7 @@
 
 	<!-- Begin: Simplify the development by including the locally built version of the dependency modules-->
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-		<ArmatRepoRoot>D:/Sources/GitHub</ArmatRepoRoot>
+		<ArmatRepoRoot>$(MSBuildProjectDirectory)/../../..</ArmatRepoRoot>
 	</PropertyGroup>
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<Reference Include="armat.utils">
