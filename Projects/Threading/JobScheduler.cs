@@ -75,7 +75,7 @@ public class JobScheduler : JobSchedulerBase
 		base.Dispose(disposing);
 	}
 
-	private const Int32 POOL_THEADS_IDLE_TIMEOUT_MS = 1000;
+	private const Int32 POOL_THREADS_IDLE_TIMEOUT_MS = 1000;
 	private const Int32 JOB_EXECUTION_WAIT_TIMEOUT_MS = 15000;
 
 	// the one JobScheduler with default configuration
@@ -462,7 +462,7 @@ public class JobScheduler : JobSchedulerBase
 
 			// wait for new long-running tasks to be queued
 			// if there's something queued within this period, continue the loop
-			_longRunningThreadsWaitHandle.WaitOne(POOL_THEADS_IDLE_TIMEOUT_MS);
+			_longRunningThreadsWaitHandle.WaitOne(POOL_THREADS_IDLE_TIMEOUT_MS);
 			if (IsStopped || _jobsQueueLongRunning.IsEmpty)
 				break;
 
@@ -493,7 +493,7 @@ public class JobScheduler : JobSchedulerBase
 
 		while (!stopThisThread && !IsStopped)
 		{
-			Boolean waitTimedOut = !_poolThreadsWaitHandle.WaitOne(POOL_THEADS_IDLE_TIMEOUT_MS);
+			Boolean waitTimedOut = !_poolThreadsWaitHandle.WaitOne(POOL_THREADS_IDLE_TIMEOUT_MS);
 			if (IsStopped)
 				break;
 

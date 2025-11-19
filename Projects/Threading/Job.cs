@@ -72,7 +72,7 @@ public class Job : IAsyncResult, IDisposable
 		// Special constructor for JobStatus.Completed job
 		// We're calling the generic constructor to initialize Id = 0
 		Debug.Assert(status == JobStatus.RanToCompletion);
-		Id = COMPLTETED_JOB_ID;
+		Id = COMPLETED_JOB_ID;
 
 		Procedure = NoAction;
 		AsyncState = null;
@@ -147,7 +147,7 @@ public class Job : IAsyncResult, IDisposable
 
 	#region Data Members & Properties
 
-	private const Int64 COMPLTETED_JOB_ID = 0;
+	private const Int64 COMPLETED_JOB_ID = 0;
 	private static readonly Job _completedJob = new(JobStatus.RanToCompletion);
 
 	[ThreadStatic]
@@ -165,12 +165,12 @@ public class Job : IAsyncResult, IDisposable
 	}
 
 	private const Int32 ALL_CREATION_OPTIONS = 0x8005F;
-	private const Int32 ALL_CONTINUATION_OPTIONS = 0x8707F;
+	private const Int32 ALL_CONTINUATION_OPTIONS = 0xF007F;
 	private const Int32 JOB_CONTINUATION_FLAG = 0x0100;
 	protected const Int32 JOB_LIGHTWEIGHT_FLAG = 0x0200;
 	protected const Int32 JOB_METHODBUILDERRESULT_FLAG = 0x0400;
 
-	private static Int64 _idCounter = COMPLTETED_JOB_ID;
+	private static Int64 _idCounter = COMPLETED_JOB_ID;
 	public Int64 Id { get; }
 
 	protected Delegate Procedure { get; set; }
@@ -1093,17 +1093,23 @@ public class Job : IAsyncResult, IDisposable
 	}
 	public void Wait(CancellationToken cancellationToken)
 	{
-		WaitNoThrow(cancellationToken);
+		if (!IsCompleted)
+		{
+			WaitNoThrow(cancellationToken);
+			if (cancellationToken.IsCancellationRequested && !IsCompleted)
+				throw new OperationCanceledException(cancellationToken);
+		}
 
 		ThrowIfCompletedUnexpectedly(false);
 	}
 	public Boolean Wait(Int32 millisecondsTimeout, CancellationToken cancellationToken)
 	{
-		Boolean result = WaitNoThrow(millisecondsTimeout, cancellationToken);
+		Boolean completed = IsCompleted || WaitNoThrow(millisecondsTimeout, cancellationToken);
+		if (!completed && cancellationToken.IsCancellationRequested)
+			throw new OperationCanceledException(cancellationToken);
 
 		ThrowIfCompletedUnexpectedly(false);
-
-		return result;
+		return completed;
 	}
 	public Boolean Wait(TimeSpan timeout)
 	{
@@ -1714,9 +1720,14 @@ public class Job : IAsyncResult, IDisposable
 		Job delayJob = new(() =>
 		{
 			if (cancellationToken.CanBeCanceled)
-				cancellationToken.WaitHandle.WaitOne(millisecondsDelay);
+			{
+				if (cancellationToken.WaitHandle.WaitOne(millisecondsDelay))
+					throw new OperationCanceledException(cancellationToken);
+			}
 			else
+			{
 				Thread.Sleep(millisecondsDelay);
+			}
 		});
 
 		delayJob.Run();
@@ -1732,9 +1743,14 @@ public class Job : IAsyncResult, IDisposable
 		Job delayJob = new(() =>
 		{
 			if (cancellationToken.CanBeCanceled)
-				cancellationToken.WaitHandle.WaitOne(delay);
+			{
+				if (cancellationToken.WaitHandle.WaitOne(delay))
+					throw new OperationCanceledException(cancellationToken);
+			}
 			else
+			{
 				Thread.Sleep(delay);
+			}
 		});
 
 		delayJob.Run();
