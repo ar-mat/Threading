@@ -68,7 +68,7 @@
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>
-		<None Update="Readme.md">
+		<None Update="Readme_.md">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>
