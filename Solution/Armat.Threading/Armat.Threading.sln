@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.9.34622.214
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11527.330 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Threading", "..\..\Projects\Threading\Threading.csproj", "{47B22F1D-8A23-4DD3-B936-281C5B6F6A5D}"
 EndProject
@@ -12,6 +12,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BuildScripts", "BuildScript
 		..\..\BuildScripts\GetAssemblyVersion.ps1 = ..\..\BuildScripts\GetAssemblyVersion.ps1
 		..\..\BuildScripts\Pack.ps1 = ..\..\BuildScripts\Pack.ps1
 		..\..\BuildScripts\Publish.ps1 = ..\..\BuildScripts\Publish.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RepositoryRootDir", "RepositoryRootDir", "{365EA0C6-B1D8-4388-8159-03D62AF7EF6B}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\LICENSE.txt = ..\..\LICENSE.txt
+		..\..\README.md = ..\..\README.md
 	EndProjectSection
 EndProject
 Global
