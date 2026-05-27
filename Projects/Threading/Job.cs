@@ -1275,10 +1275,6 @@ public class Job : IAsyncResult, IDisposable
 	{
 		JobContinuationOptions continuationOptions = JobContinuationOptions.None;
 
-		// continuations will run only if the current one completes with success
-		continuationOptions |= JobContinuationOptions.OnlyOnRanToCompletion;
-
-		// determine if continuations should run in synchronous or asynchronous manner
 		if ((initiatorCreationOptions & JobCreationOptions.RunContinuationsAsynchronously) == JobCreationOptions.RunContinuationsAsynchronously)
 		{
 			continuationOptions |= JobContinuationOptions.RunContinuationsAsynchronously;
