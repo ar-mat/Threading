@@ -908,9 +908,30 @@ public class Job : IAsyncResult, IDisposable
 
 			Tuple<Action, Job?, ThreadRuntimeContext?> actionWithContext = new(action, currentJob, currentThreadContext);
 			if (runSynchronously)
-				configuration.SynchronizationContext.Send(_fnActionExecutorSendOrPostCallback, actionWithContext);
+			{
+				if (_supportsSynchronizationContextSend)
+				{
+					try
+					{
+						configuration.SynchronizationContext.Send(_fnActionExecutorSendOrPostCallback, actionWithContext);
+					}
+					catch (NotSupportedException)
+					{
+						// if SynchronizationContext.Send is not supported, fallback to direct call
+						_supportsSynchronizationContextSend = false;
+						_fnActionExecutorSendOrPostCallback(actionWithContext);
+					}
+				}
+				else
+				{
+					// make a direct call to the callback without using SynchronizationContext.Send
+					_fnActionExecutorSendOrPostCallback(actionWithContext);
+				}
+			}
 			else
+			{
 				configuration.SynchronizationContext.Post(_fnActionExecutorSendOrPostCallback, actionWithContext);
+			}
 		}
 		else if (configuration?.ExecutionContext != null)
 		{
@@ -967,6 +988,11 @@ public class Job : IAsyncResult, IDisposable
 	}
 	private static readonly SendOrPostCallback _fnActionExecutorSendOrPostCallback = new(SynchronizationContextRunProc);
 	private static readonly ContextCallback _fnActionExecutorContextCallback = new(ExecutionContextRunProc);
+
+
+	// in some environments the SynchronizationContext.Send method is not supported and will throw NotSupportedException if called
+	// this property allows to configure the JobScheduler to avoid using SynchronizationContext.Send in such environments
+	private static Boolean _supportsSynchronizationContextSend = true;
 
 	private IReadOnlyCollection<Job>? GetPendingContinuations(Boolean extendContinuationsBaseIndex)
 	{
@@ -1210,7 +1236,7 @@ public class Job : IAsyncResult, IDisposable
 
 	protected Job SetAwaiterContinuation(Action continuation, AwaiterConfiguration configuration)
 	{
-		JobContinuationOptions continuationOptions = JobContinuationOptions.OnlyOnRanToCompletion;
+		JobContinuationOptions continuationOptions = JobContinuationOptions.None;
 
 		if (configuration != null && configuration.AttachedToParent)
 			continuationOptions |= JobContinuationOptions.AttachedToParent;

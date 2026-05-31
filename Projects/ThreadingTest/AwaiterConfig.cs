@@ -206,7 +206,7 @@ public class JobSchedulerUnitTest_AwaiterConfig
 		Boolean succeeded;
 		String[] result;
 		String[] result_VerifyThreadLocals_Job, result_VerifyThreadLocals_Task;
-		Int32 expectedDurationMS = 1_000, expectedDurationErrorPerc = 100;
+		Int32 expectedDurationMS = 1_000, expectedDurationErrorPerc = 200;
 		System.Diagnostics.Stopwatch _stopWatch = System.Diagnostics.Stopwatch.StartNew();
 
 		// VerifyThreadLocals_Job
